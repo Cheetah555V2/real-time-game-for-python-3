@@ -38,8 +38,9 @@ running = True
 
 npc1 = NPC(10, 10)
 npc2 = NPC(20, 69, 3, 1)
+npc3 = NPC(40, 40, 5, 3)
 
-all_npc = [npc1, npc2]
+all_npc = [npc1, npc2, npc3]
 
 player_x = 10
 player_y = 10
@@ -57,9 +58,9 @@ def scan_keys():
 
 def render_state():
     #print("player is at:", player_x, player_y)
-    print("npc1 is at:", npc1.x_pos, npc1.y_pos)
-    print("npc2 is at:", npc2.x_pos, npc2.y_pos)
-    print()
+    for i in range(len(all_npc)):
+        print(f"npc{i+1} is at: {all_npc[i].x_pos} {all_npc[i].y_pos}")
+    print() #for readability
 
 
 def update_state(inp):
