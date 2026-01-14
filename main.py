@@ -57,7 +57,7 @@ def scan_keys():
 
 
 def render_state():
-    #print("player is at:", player_x, player_y)
+    print("player is at:", player_x, player_y)
     for i in range(len(all_npc)):
         print(f"npc{i+1} is at: {all_npc[i].x_pos} {all_npc[i].y_pos}")
     print() #for readability
