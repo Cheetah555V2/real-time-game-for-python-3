@@ -63,5 +63,13 @@ class GameEngine:
 
             if npc.x <= 0 or npc.x >= self.width - 1:
                 npc.vx *= -1
+                if npc.x <= 0:
+                    npc.x = 0
+                else:
+                    npc.x = self.width - 1
             if npc.y <= 0 or npc.y >= self.height - 1:
                 npc.vy *= -1
+                if npc.y <= 0:
+                    npc.y = 0
+                else:
+                    npc.y = self.width - 1
