@@ -5,11 +5,11 @@ class GraphicsEngine:
         self.npcs = npcs
     
     def render_player_position(self) -> None:
-        print(f"Player is at: {self.player.x_pos} {self.player.y_pos}")
+        print(f"Player is at: {self.player.x} {self.player.y}")
     
     def render_npcs_position(self) -> None:
         for i in range(len(self.npcs)):
-            print(f"NPC {i+1} is at: {self.npcs[i].x_pos} {self.npcs[i].y_pos}")
+            print(f"NPC {i+1} is at: {self.npcs[i].x} {self.npcs[i].y}")
     
     def render(self) -> None:
         self.render_player_position()
