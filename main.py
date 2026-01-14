@@ -92,16 +92,16 @@ def update_state(inp):
     for i in range(len(all_npc)):
         if all_npc[i].x_pos >= x_max:
             all_npc[i].x_pos = x_max
-            all_npc[i].x_speed = -1
+            all_npc[i].x_speed = -all_npc[i].x_speed
         elif all_npc[i].x_pos <= x_min:
             all_npc[i].x_pos = x_min
-            all_npc[i].x_speed = 1
+            all_npc[i].x_speed = -all_npc[i].x_speed
         if all_npc[i].y_pos >= y_max:
             all_npc[i].y_pos = y_max
-            all_npc[i].y_speed = -2
+            all_npc[i].y_speed = -all_npc[i].y_speed
         elif all_npc[i].y_pos <= y_min:
             all_npc[i].y_pos = y_min
-            all_npc[i].y_speed = 2
+            all_npc[i].y_speed = -all_npc[i].y_speed
         
 
 while running:
