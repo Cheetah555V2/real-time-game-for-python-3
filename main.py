@@ -24,16 +24,22 @@ class KBPoller:
         listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, suppress=True)
         listener.start()
 
+class NPC:
+    def __init__(self, x_pos, y_pos, x_speed= 1, y_speed= 2):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.x_speed = x_speed
+        self.y_speed = y_speed
+    
 
 user_keyboard = KBPoller()
 
 running = True
 
-npc_x = 10
-npc_y = 10
-npc_x_speed = 1
-npc_y_speed = 2
+npc1 = NPC(10, 10)
+npc2 = NPC(20, 69, 3, 1)
 
+all_npc = [npc1, npc2]
 
 player_x = 10
 player_y = 10
@@ -51,14 +57,17 @@ def scan_keys():
 
 def render_state():
     #print("player is at:", player_x, player_y)
-    print("npc is at:", npc_x, npc_y)
+    print("npc1 is at:", npc1.x_pos, npc1.y_pos)
+    print("npc2 is at:", npc2.x_pos, npc2.y_pos)
+    print()
 
 
 def update_state(inp):
-    global player_x, player_y, running, npc_x, npc_y, npc_x_speed, npc_y_speed
+    global player_x, player_y, running, all_npc
 
-    npc_x += npc_x_speed
-    npc_y += npc_y_speed
+    for i in range(len(all_npc)):
+        all_npc[i].x_pos += all_npc[i].x_speed
+        all_npc[i].y_pos += all_npc[i].y_speed
 
     if "a" in inp:
         player_x -= 1
@@ -80,19 +89,20 @@ def update_state(inp):
     if player_y > y_max:
         player_y = y_max
 
-    if npc_x >= x_max:
-        npc_x = x_max
-        npc_x_speed = -1
-    elif npc_x <= x_min:
-        npc_x = x_min
-        npc_x_speed = 1
-    if npc_y >= y_max:
-        npc_y = y_max
-        npc_y_speed = -2
-    elif npc_y <= y_min:
-        npc_y = y_min
-        npc_y_speed = 2
-    
+    for i in range(len(all_npc)):
+        if all_npc[i].x_pos >= x_max:
+            all_npc[i].x_pos = x_max
+            all_npc[i].x_speed = -1
+        elif all_npc[i].x_pos <= x_min:
+            all_npc[i].x_pos = x_min
+            all_npc[i].x_speed = 1
+        if all_npc[i].y_pos >= y_max:
+            all_npc[i].y_pos = y_max
+            all_npc[i].y_speed = -2
+        elif all_npc[i].y_pos <= y_min:
+            all_npc[i].y_pos = y_min
+            all_npc[i].y_speed = 2
+        
 
 while running:
     # read/check for user actions (input)
