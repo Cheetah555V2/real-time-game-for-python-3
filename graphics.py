@@ -11,7 +11,7 @@ class GraphicsEngine:
         for i in range(len(self.npcs)):
             print(f"NPC {i+1} is at: {self.npcs[i].x_pos} {self.npcs[i].y_pos}")
     
-    def render_all_object_position(self) -> None:
+    def render(self) -> None:
         self.render_player_position()
         self.render_npcs_position()
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     npcs = [NPC(20, 20), NPC(30, 30)]
     gp_engine = GraphicsEngine(player1, npcs)
 
-    gp_engine.render_all_object_position()
+    gp_engine.render()
     print()
     gp_engine.render_npcs_position()
     print()
