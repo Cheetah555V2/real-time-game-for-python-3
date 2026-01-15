@@ -36,5 +36,5 @@ if __name__ == "__main__":
                                     user_keyboard,
                                     100,
                                     100,
-                                    5)
+                                    fps= 5)
     engine.run()
