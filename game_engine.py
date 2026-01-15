@@ -1,5 +1,6 @@
 import time
-
+import pygame
+from graphics import GraphicsEngine, PygameGraphicsEngine
 
 class GameEngine:
     """
@@ -9,7 +10,7 @@ class GameEngine:
     - calling input and graphics subsystems
     """
 
-    def __init__(self, player, npcs, graphics_engine, input_system,
+    def __init__(self, player, npcs, graphics_engine: GraphicsEngine, input_system,
                  width=40, height=20, fps=10):
         self.player = player
         self.npcs = npcs
@@ -73,3 +74,30 @@ class GameEngine:
                     npc.y = 0
                 else:
                     npc.y = self.width - 1
+
+class PygameGameEngine(GameEngine):
+    def __init__(self, player, npcs, graphics_engine: PygameGraphicsEngine, input_system,
+                 width=40, height=20, fps=10):
+        super().__init__(player, npcs, graphics_engine, input_system, width, height, fps)
+    
+    def run(self):
+        
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+    
+    def update(self):
+        keys = pygame.key.get_pressed()
+        keys_set = set()
+        if keys[pygame.K_w]:
+            keys_set.add('w')
+        if keys[pygame.K_a]:
+            keys_set.add('a')
+        if keys[pygame.K_s]:
+            keys_set.add('s')
+        if keys[pygame.K_d]:
+            keys_set.add('d')
+        if keys[pygame.K_q]:
+            keys_set.add('q')
+        super().update(keys_set)
