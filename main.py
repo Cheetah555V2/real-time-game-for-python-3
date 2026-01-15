@@ -2,9 +2,7 @@ from pynput import keyboard
 import time
 import graphics
 import game_engine
-# pip install pynput
-
-
+from game_object import Player, NPC
 class KBPoller:
     def on_press(self, key):
         try:
@@ -29,28 +27,11 @@ class KBPoller:
     def scan_keys(self):
         return self.pressed
 
-class NPC:
-    def __init__(self, x, y, vx= 1, vy= 2):
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-
-class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 2):
-        super().__init__(x, y, vx, vy)    
-
 user_keyboard = KBPoller()
 
-player1 = Player(20, 20)
-
-all_npc = [NPC(10, 10), NPC(20, 69, 3, 1), NPC(40, 40, 5, 3)]
-
-
-
 if __name__ == "__main__":
-    engine = game_engine.GameEngine(player1,
-                                    all_npc,
+    engine = game_engine.GameEngine(Player(10, 10),
+                                    [NPC(20, 20, 1, 2), NPC(30, 30, 2, 3)],
                                     graphics.GraphicsEngine(),
                                     user_keyboard,
                                     100,

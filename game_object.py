@@ -24,7 +24,7 @@ class NPC:
         return self.x, self.y
 
 class Player(NPC):
-    def __init__(self, x, y, vx, vy):
+    def __init__(self, x, y, vx= 1, vy= 1):
         super().__init__(x, y, vx, vy)
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
@@ -45,3 +45,6 @@ class Player(NPC):
                   'a' in key_pressed_lower,
                   's' in key_pressed_lower,
                   'd' in key_pressed_lower)
+    
+    def get_position(self):
+        return super().get_position()
