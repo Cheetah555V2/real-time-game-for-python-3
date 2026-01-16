@@ -24,8 +24,9 @@ class NPC:
         return self.x, self.y
 
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1):
+    def __init__(self, x, y, vx= 1, vy= 1, angle= 0):
         super().__init__(x, y, vx, vy)
+        self.angle = angle
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
