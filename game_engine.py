@@ -1,6 +1,7 @@
 import time
 import pygame
 from graphics import GraphicsEngine, PygameGraphicsEngine
+from game_object import Player, NPC
 
 class GameEngine:
     """
@@ -10,7 +11,7 @@ class GameEngine:
     - calling input and graphics subsystems
     """
 
-    def __init__(self, player, npcs, graphics_engine: GraphicsEngine, input_system,
+    def __init__(self, player: Player, npcs: list[NPC], graphics_engine: GraphicsEngine, input_system,
                  width=40, height=20, fps=10):
         self.player = player
         self.npcs = npcs
@@ -76,9 +77,11 @@ class GameEngine:
                     npc.y = self.width - 1
 
 class PygameGameEngine(GameEngine):
-    def __init__(self, player, npcs, graphics_engine: PygameGraphicsEngine, input_system,
+    def __init__(self, player: Player, npcs: list[NPC], graphics_engine: PygameGraphicsEngine, input_system,
                  width=40, height=20, fps=10):
         super().__init__(player, npcs, graphics_engine, input_system, width, height, fps)
+        graphics_engine.setup((self.width, self.height), "white")
+        self.clock = pygame.time.Clock()
     
     def run(self):
         
@@ -86,18 +89,36 @@ class PygameGameEngine(GameEngine):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                
+            self._handle_input()
+            self._update_npc()
+            self.graphics.render(self.player, self.npcs)
+            self.clock.tick(self.fps)
+            
     
-    def update(self):
+    def _handle_input(self):
         keys = pygame.key.get_pressed()
-        keys_set = set()
-        if keys[pygame.K_w]:
-            keys_set.add('w')
-        if keys[pygame.K_a]:
-            keys_set.add('a')
-        if keys[pygame.K_s]:
-            keys_set.add('s')
-        if keys[pygame.K_d]:
-            keys_set.add('d')
-        if keys[pygame.K_q]:
-            keys_set.add('q')
-        super().update(keys_set)
+        print(keys[pygame.K_a])
+        self.player.walk(keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d])
+
+        # Check bound
+        self.player.x = max(0, min(self.width - 1, self.player.x))
+        self.player.y = max(0, min(self.height - 1, self.player.y))
+
+    def _update_npc(self):
+        for npc in self.npcs:
+            npc.x += npc.vx
+            npc.y += npc.vy
+
+            if npc.x <= 0 or npc.x >= self.width - 1:
+                npc.vx *= -1
+                if npc.x <= 0:
+                    npc.x = 0
+                else:
+                    npc.x = self.width - 1
+            if npc.y <= 0 or npc.y >= self.height - 1:
+                npc.vy *= -1
+                if npc.y <= 0:
+                    npc.y = 0
+                else:
+                    npc.y = self.width - 1

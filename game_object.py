@@ -29,11 +29,11 @@ class Player(NPC):
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
-            self.y += self.vy
+            self.y -= self.vy
         if a_pressed:
             self.x -= self.vx
         if s_pressed:
-            self.y -= self.vy
+            self.y += self.vy
         if d_pressed:
             self.x += self.vx
     
