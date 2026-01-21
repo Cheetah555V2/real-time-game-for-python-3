@@ -1,3 +1,5 @@
+import math
+
 class NPC:
     def __init__(self, x: int, y: int, vx: int = 1, vy: int = 1):
         self.x = x
@@ -49,3 +51,14 @@ class Player(NPC):
     
     def get_position(self):
         return super().get_position()
+
+class Bullet():
+    def __init__(self, x: float, y: float, x_speed: float, y_speed: float):
+        self.x = x
+        self.y = y
+        self.x_speed = x_speed
+        self.y_speed = y_speed
+    
+    def update(self):
+        self.x += self.x_speed
+        self.y += self.y_speed
