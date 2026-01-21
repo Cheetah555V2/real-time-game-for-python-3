@@ -1,3 +1,5 @@
+from datatype import Angle
+
 import math
 
 class NPC:
@@ -26,9 +28,10 @@ class NPC:
         return self.x, self.y
 
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1, angle= 0):
+    def __init__(self, x, y, vx= 1, vy= 1, angle= 0, v_angle= 1):
         super().__init__(x, y, vx, vy)
-        self.angle = angle
+        self.angle = Angle(angle)
+        self.v_angle = v_angle
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
@@ -39,15 +42,25 @@ class Player(NPC):
             self.y += self.vy
         if d_pressed:
             self.x += self.vx
-    
+
+    def rotate(self, q_pressed: bool, e_pressed: bool) -> None:
+        if q_pressed:
+            self.angle.rotate(self.v_angle)
+        if e_pressed:
+            self.angle.rotate(-self.v_angle)
+
     def update(self, key_pressed: set[str]):
         key_pressed_lower = set()
         for i in key_pressed:
             key_pressed_lower.add(i.lower())
+            
         self.walk('w' in key_pressed_lower,
                   'a' in key_pressed_lower,
                   's' in key_pressed_lower,
                   'd' in key_pressed_lower)
+        
+        self.rotate('q' in key_pressed_lower,
+                    'e' in key_pressed_lower)
     
     def get_position(self):
         return super().get_position()
