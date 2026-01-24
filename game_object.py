@@ -1,7 +1,5 @@
 from datatype import Angle
 
-import math
-
 class NPC:
     def __init__(self, x: int, y: int, vx: int = 1, vy: int = 1):
         self.x = x
@@ -75,3 +73,6 @@ class Bullet():
     def update(self):
         self.x += self.x_speed
         self.y += self.y_speed
+    
+    def get_position(self) -> tuple[float, float]:
+        return self.x, self.y
