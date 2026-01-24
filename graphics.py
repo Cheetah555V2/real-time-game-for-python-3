@@ -1,5 +1,5 @@
 import pygame
-from game_object import Player, NPC
+from game_object import Player, NPC, Bullet
 
 class GraphicsEngine:
     def __init__(self) -> None:
@@ -22,20 +22,34 @@ class PygameGraphicsEngine(GraphicsEngine):
         self.screen = pygame.display.set_mode((screen_size))
         self.background_color = background_color
     
-    def render(self, player: Player, npcs: list[NPC], player_radius: float = 10, npc_radius: float = 10):
+    def render(self,
+               player: Player,
+               npcs: list[NPC],
+               bullets: list[Bullet],
+               player_radius: float = 10,
+               npc_radius: float = 10,
+               bullet_radius: float = 2) -> None:
+        
         self.screen.fill(self.background_color)
         self._draw_npcs(npcs, npc_radius)
         self._draw_player(player, player_radius)
+        self._draw_bullets(bullets, bullet_radius)
         pygame.display.flip()
     
     def _draw_player(self, player: Player, player_radius: float = 10):
         player_position = player.get_position()
-        pygame.draw.circle(self.screen, "red", pygame.Vector2(player_position[0], player_position[1]), player_radius)
+        pygame.draw.circle(self.screen, "green", pygame.Vector2(player_position[0], player_position[1]), player_radius)
     
     def _draw_npcs(self, npcs: list[NPC], npc_radius: float = 10):
         for npc in npcs:
             npc_position = npc.get_position()
             pygame.draw.circle(self.screen, "purple", pygame.Vector2(npc_position[0], npc_position[1]), npc_radius)
+        
+    def _draw_bullets(self, bullets: list[Bullet], bullet_radius: float = 2):
+        for bullet in bullets:
+            bullet_position = bullet.get_position()
+            pygame.draw.circle(self.screen, "red", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet_radius)
+
 
 if __name__ == "__main__":
     player1 = Player(10, 10, 1, 1)
