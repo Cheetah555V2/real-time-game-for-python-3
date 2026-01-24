@@ -1,7 +1,7 @@
 import time
 import pygame
 from graphics import GraphicsEngine, PygameGraphicsEngine
-from game_object import Player, NPC
+from game_object import Player, NPC, Bullet
 
 class GameEngine:
     """
@@ -82,6 +82,7 @@ class PygameGameEngine(GameEngine):
         super().__init__(player, npcs, graphics_engine, input_system, width, height, fps)
         graphics_engine.setup((self.width, self.height), "white")
         self.clock = pygame.time.Clock()
+        self.bullets = []
     
     def run(self):
         
@@ -92,18 +93,27 @@ class PygameGameEngine(GameEngine):
                 
             self._handle_input()
             self._update_npc()
-            self.graphics.render(self.player, self.npcs)
+            self._update_bullet()
+            self.graphics.render(self.player, self.npcs, self.bullets)
             self.clock.tick(self.fps)
             
     
     def _handle_input(self):
+        # get input from user
         keys = pygame.key.get_pressed()
-        print(keys[pygame.K_a])
+
+        # Check if player shoot
+        if keys[pygame.K_SPACE]:
+            self.bullets.append(Bullet(self.player.x, self.player.y, 2, 2))
+
+        # walk user
         self.player.walk(keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d])
 
         # Check bound
         self.player.x = max(0, min(self.width - 1, self.player.x))
         self.player.y = max(0, min(self.height - 1, self.player.y))
+
+
 
     def _update_npc(self):
         for npc in self.npcs:
@@ -122,3 +132,15 @@ class PygameGameEngine(GameEngine):
                     npc.y = 0
                 else:
                     npc.y = self.width - 1
+    
+    def _update_bullet(self):
+        remove = list()
+        for i, bullet in enumerate(self.bullets):
+            bullet.update()
+
+            # Check if the bullet is out of bound, if it is then remove it
+            if bullet.x < 0 or bullet.y < 0 or bullet.x > self.width or bullet.y > self.height:
+                remove.append(i)
+        
+        for i in remove[::-1]:
+            self.bullets.pop(i)
