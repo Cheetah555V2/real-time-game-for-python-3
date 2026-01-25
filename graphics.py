@@ -38,7 +38,17 @@ class PygameGraphicsEngine(GraphicsEngine):
     
     def _draw_player(self, player: Player, player_radius: float = 10):
         player_position = player.get_position()
-        pygame.draw.circle(self.screen, "green", pygame.Vector2(player_position[0], player_position[1]), player_radius)
+        pygame.draw.circle(self.screen,
+                           "green",
+                           pygame.Vector2(player_position[0], player_position[1]),
+                           player_radius)
+        pygame.draw.line(self.screen,
+                         "black",
+                         pygame.Vector2(player_position[0],
+                                        player_position[1]),
+                         pygame.Vector2(player_position[0] + player_radius * player.angle.cos(),
+                                        player_position[1] + player_radius * player.angle.sin())
+                        )
     
     def _draw_npcs(self, npcs: list[NPC], npc_radius: float = 10):
         for npc in npcs:
