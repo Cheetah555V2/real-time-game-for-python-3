@@ -5,9 +5,9 @@ from graphics import GraphicsEngine, PygameGraphicsEngine
 from game_object import *
 from datatype import Angle
 
-from level import tutorial, level_1, level_2, level_3, level_4, level_5, level_6
+from level import level_6, level_7, level_8, tutorial, level_1, level_2, level_3, level_4, level_5
 
-level_order = [tutorial, level_1, level_2, level_3, level_4, level_5, level_6]
+level_order = [tutorial, level_1, level_2, level_3, level_4, level_5, level_6, level_7, level_8]
 class GameEngine:
     """
     GameEngine is responsible for:
@@ -126,18 +126,18 @@ class PygameGameEngine(GameEngine):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False    
-
-            self._check_collision()
-            self._update_player(pygame.key.get_pressed())
-            self._update_npc()
-            self._update_bullet()
-            self._update_obstacles()
-            self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
-            self.clock.tick(self.fps)
             
-            # Wait 3 seconds if all npcs are destroyed then go to the next level
-            if self.npcs == [] and self.is_game_over == False:
-                if self.current_level < len(level_order):
+            # Only update game state if game is not over
+            if not self.is_game_over:
+                self._check_collision()
+                self._update_player(pygame.key.get_pressed())
+                self._update_npc()
+                self._update_bullet()
+                self._update_obstacles()
+                self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
+                
+                # Wait 3 seconds if all npcs are destroyed then go to the next level
+                if self.npcs == []:
                     for _ in range(self.fps * 3):
                         for event in pygame.event.get():
                             if event.type == pygame.QUIT:
@@ -145,21 +145,34 @@ class PygameGameEngine(GameEngine):
                         self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
                         self.clock.tick(self.fps)
                     self.current_level += 1
-                    if self.current_level >= len(level_order):  
-                        self.is_game_over = True
+                    if self.current_level >= len(level_order):
+                        self.running = False
                     else:
                         self.load_level(self.current_level)
-                
-            
-            # Game over screen
-            if self.is_game_over:
+            else:
+                # Show game over screen for 3 seconds then exit
                 self.graphics.render_over_screen()
-                for _ in range(self.fps * 3):
+                pygame.display.flip()
+                
+                # Wait for 3 seconds
+                start_time = time.time()
+                while time.time() - start_time < 3:
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
-                            self.running = False    
+                            self.running = False
+                            return
+                    # Keep updating the display during the wait
                     self.graphics.render_over_screen()
+                    pygame.display.flip()
                     self.clock.tick(self.fps)
+                
+                # After 3 seconds, exit the game
+                self.running = False
+            
+            self.clock.tick(self.fps)
+        
+        # Clean up pygame after game loop ends
+        pygame.quit()
  
             
     def _check_collision(self):
@@ -246,15 +259,23 @@ class PygameGameEngine(GameEngine):
                 else:
                     npc.y = self.height - npc.radius
             
-            # Shooting logic (keep original)
+            # Check if npc shoot with patterns
             if npc.is_shooting and npc.current_cooldown == 0:
-                shooting_angle = Angle(math.degrees(math.atan2(self.player.y - npc.y, self.player.x - npc.x)))
-                self.bullets.append(npc.shoot(shooting_angle, 5, friendly=False))
+                if hasattr(npc, 'shoot_pattern'):
+                    # Use pattern shooting
+                    bullets = npc.shoot_pattern(self.player.x, self.player.y)
+                    self.bullets.extend(bullets)
+                else:
+                    # Fallback to old shooting
+                    shooting_angle = Angle(math.degrees(math.atan2(self.player.y - npc.y, self.player.x - npc.x)))
+                    self.bullets.append(npc.shoot(shooting_angle, 5, friendly=False))
+                
                 npc.current_cooldown = npc.bullet_cooldown
+                
             if npc.current_cooldown > 0:
                 npc.current_cooldown -= 1
         
-        # Call boss update if needed (keep original)
+        # Call boss update if needed
         self._update_boss()
             
     def _update_obstacles(self):

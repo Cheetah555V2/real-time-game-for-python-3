@@ -13,7 +13,10 @@ class NPC:
                  max_health: float = 100,
                  is_shooting: bool = False,
                  bullet_cooldown: int = 30,
-                 bullet_damage: float = 10):
+                 bullet_damage: float = 10,
+                 bullet_pattern: str = "single",  # "single", "spread", "circle", "spiral"
+                 pattern_params: dict = None,  # type: ignore
+                 bullet_color: str = None): # type: ignore
         self.x = x
         self.y = y
         self.vx = vx
@@ -25,6 +28,12 @@ class NPC:
         self.bullet_cooldown = bullet_cooldown
         self.current_cooldown = 0
         self.bullet_damage = bullet_damage
+        self.bullet_pattern = bullet_pattern
+        self.pattern_params = pattern_params if pattern_params else {}
+        self.bullet_color = bullet_color if bullet_color else random.choice(["red", "orange"])
+        
+        # For spiral pattern
+        self.spiral_offset = 0
 
     def walk(self):
         self.x += self.vx
@@ -69,6 +78,69 @@ class NPC:
     def shoot(self, angle: Angle, speed: float, friendly: bool = False) -> 'Bullet':
         bullet = Bullet(self.x, self.y, angle, speed, friendly=friendly, damage=self.bullet_damage)
         return bullet
+    
+    def shoot_pattern(self, target_x: float = None, target_y: float = None) -> list['Bullet']: # type: ignore
+        """Shoot bullets based on pattern"""
+        if self.bullet_pattern == "single":
+            angle = self._get_aim_angle(target_x, target_y)
+            return BulletPattern.single(self.x, self.y, angle, 5, 
+                                       friendly=False, damage=self.bullet_damage,
+                                       color=self.bullet_color)
+        
+        elif self.bullet_pattern == "spread":
+            angle = self._get_aim_angle(target_x, target_y)
+            num_bullets = self.pattern_params.get("num_bullets", 5)
+            spread = self.pattern_params.get("spread_angle", 45)
+            speed = self.pattern_params.get("speed", 4)
+            return BulletPattern.spread(self.x, self.y, angle, num_bullets, spread,
+                                       speed, False, self.bullet_damage, self.bullet_color)
+        
+        elif self.bullet_pattern == "circle":
+            num_bullets = self.pattern_params.get("num_bullets", 8)
+            speed = self.pattern_params.get("speed", 3)
+            random_offset = self.pattern_params.get("random_offset", True)
+            return BulletPattern.circle(self.x, self.y, num_bullets, speed,
+                                       False, self.bullet_damage, self.bullet_color,
+                                       random_offset)
+        
+        elif self.bullet_pattern == "spiral":
+            num_arms = self.pattern_params.get("num_arms", 3)
+            bullets_per_arm = self.pattern_params.get("bullets_per_arm", 3)
+            speed = self.pattern_params.get("speed", 4)
+            
+            bullets = BulletPattern.spiral(self.x, self.y, self.spiral_offset,
+                                          num_arms, bullets_per_arm, speed,
+                                          False, self.bullet_damage, self.bullet_color)
+            # Update spiral offset for next shot
+            self.spiral_offset += 15
+            if self.spiral_offset >= 360:
+                self.spiral_offset = 0
+            
+            return bullets
+        
+        elif self.bullet_pattern == "aimed_spread":
+            num_bullets = self.pattern_params.get("num_bullets", 7)
+            spread = self.pattern_params.get("spread_angle", 30)
+            speed = self.pattern_params.get("speed", 5)
+            return BulletPattern.aimed_spread(self.x, self.y, target_x, target_y,
+                                             num_bullets, spread, speed,
+                                             False, self.bullet_damage, self.bullet_color)
+        
+        # Default to single shot
+        angle = self._get_aim_angle(target_x, target_y)
+        return BulletPattern.single(self.x, self.y, angle, 5, 
+                                   friendly=False, damage=self.bullet_damage,
+                                   color=self.bullet_color)
+    
+    def _get_aim_angle(self, target_x: float = None, target_y: float = None) -> Angle: # type: ignore
+        """Get angle to aim at target or random direction"""
+        if target_x is not None and target_y is not None:
+            dx = target_x - self.x
+            dy = target_y - self.y
+            return Angle(math.degrees(math.atan2(dy, dx)))
+        else:
+            # Random direction for non-aimed patterns
+            return Angle(random.randint(0, 360))
 
 class BossNPC(NPC):
     def __init__(self,
@@ -218,6 +290,50 @@ class BossNPC(NPC):
     def update_phase_timer(self):
         if self.phase_change_timer > 0:
             self.phase_change_timer -= 1
+    
+    def shoot_pattern(self, target_x: float = None, target_y: float = None) -> list['Bullet']: # type: ignore
+        """Override to use phase-specific patterns"""
+        if self.phase in self.phase_attributes:
+            attrs = self.phase_attributes[self.phase]
+            pattern = attrs.get("pattern", "single")
+            params = attrs.get("pattern_params", {})
+            
+            if pattern == "single":
+                angle = self._get_aim_angle(target_x, target_y)
+                return BulletPattern.single(self.x, self.y, angle, 5, 
+                                           friendly=False, damage=self.bullet_damage,
+                                           color=self.current_color)
+            elif pattern == "circle":
+                return BulletPattern.circle(self.x, self.y, 
+                                           params.get("num_bullets", 8),
+                                           params.get("speed", 3),
+                                           False, self.bullet_damage,
+                                           self.current_color, True)
+            elif pattern == "spread":
+                angle = self._get_aim_angle(target_x, target_y)
+                return BulletPattern.spread(self.x, self.y, angle,
+                                           params.get("num_bullets", 5),
+                                           params.get("spread_angle", 45),
+                                           params.get("speed", 4),
+                                           False, self.bullet_damage,
+                                           self.current_color)
+            elif pattern == "spiral":
+                return BulletPattern.spiral(self.x, self.y, self.spiral_offset,
+                                           params.get("num_arms", 3),
+                                           params.get("bullets_per_arm", 3),
+                                           params.get("speed", 4),
+                                           False, self.bullet_damage,
+                                           self.current_color)
+            elif pattern == "aimed_spread":
+                return BulletPattern.aimed_spread(self.x, self.y, target_x, target_y,
+                                                 params.get("num_bullets", 7),
+                                                 params.get("spread_angle", 30),
+                                                 params.get("speed", 5),
+                                                 False, self.bullet_damage,
+                                                 self.current_color)
+        
+        # Default fallback
+        return super().shoot_pattern(target_x, target_y)
 class Player(NPC):
     def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
         super().__init__(x, y, vx, vy)
@@ -266,7 +382,7 @@ class Player(NPC):
         return super().get_position()
     
     def _reset_cooldown(self):
-        self.bullet_cooldown = 10
+        self.bullet_cooldown = 6
     
     def reduce_cooldown(self):
         if self.bullet_cooldown > 0:
@@ -296,7 +412,9 @@ class Player(NPC):
             self.i_frame -= 1
 
 class Bullet():
-    def __init__(self, x: float, y: float, angle: Angle, speed: float, radius: float = 2, friendly: bool = True, damage: float = 10):
+    def __init__(self, x: float, y: float, angle: Angle, speed: float, 
+                 radius: float = 3, friendly: bool = True, damage: float = 10,
+                 color: str = None): # type: ignore
         self.x = x
         self.y = y
         self.x_speed = angle.cos() * speed
@@ -304,6 +422,7 @@ class Bullet():
         self.radius = radius
         self.friendly = friendly
         self.damage = damage
+        self.color = color if color else ("yellow" if friendly else "red")
     
     def update(self):
         self.x += self.x_speed
@@ -317,7 +436,81 @@ class Bullet():
     
     def is_friendly(self) -> bool:
         return self.friendly
+    
+    def get_color(self) -> str:
+        return self.color
 
+class BulletPattern:
+    @staticmethod
+    def single(origin_x: float, origin_y: float, angle: Angle, speed: float = 5, 
+               friendly: bool = False, damage: float = 5, color: str = None): # type: ignore
+        """Single bullet"""
+        return [Bullet(origin_x, origin_y, angle, speed, friendly=friendly, 
+                      damage=damage, color=color)]
+    
+    @staticmethod
+    def spread(origin_x: float, origin_y: float, center_angle: Angle, 
+               num_bullets: int = 5, spread_angle: float = 45, 
+               speed: float = 4, friendly: bool = False, damage: float = 4,
+               color: str = None): # type: ignore
+        """Spread shot pattern"""
+        bullets = []
+        start_angle = center_angle - Angle(spread_angle / 2)
+        angle_step = spread_angle / (num_bullets - 1) if num_bullets > 1 else 0
+        
+        for i in range(num_bullets):
+            bullet_angle = start_angle + Angle(angle_step * i)
+            bullets.append(Bullet(origin_x, origin_y, bullet_angle, speed, 
+                                 friendly=friendly, damage=damage, color=color))
+        return bullets
+    
+    @staticmethod
+    def circle(origin_x: float, origin_y: float, num_bullets: int = 8, 
+               speed: float = 3, friendly: bool = False, damage: float = 3,
+               color: str = None, random_offset: bool = False): # type: ignore
+        """Circle pattern"""
+        bullets = []
+        angle_step = 360 / num_bullets
+        offset = Angle(random.randint(0, 360)) if random_offset else Angle(0)
+        
+        for i in range(num_bullets):
+            angle = Angle(i * angle_step) + offset
+            bullets.append(Bullet(origin_x, origin_y, angle, speed, 
+                                 friendly=friendly, damage=damage, color=color))
+        return bullets
+    
+    @staticmethod
+    def spiral(origin_x: float, origin_y: float, angle_offset: float, 
+               num_arms: int = 3, bullets_per_arm: int = 4, 
+               speed: float = 4, friendly: bool = False, damage: float = 4,
+               color: str = None): # type: ignore
+        """Spiral pattern"""
+        bullets = []
+        angle_step = 360 / num_arms
+        
+        for arm in range(num_arms):
+            base_angle = Angle(arm * angle_step + angle_offset)
+            for i in range(bullets_per_arm):
+                # Each bullet in the arm has a slight offset
+                spread = 10  # degrees
+                bullet_angle = base_angle + Angle(i * spread)
+                bullets.append(Bullet(origin_x, origin_y, bullet_angle, speed * (0.8 + i * 0.1),
+                                     friendly=friendly, damage=damage, color=color))
+        return bullets
+    
+    @staticmethod
+    def aimed_spread(origin_x: float, origin_y: float, target_x: float, target_y: float,
+                    num_bullets: int = 7, spread_angle: float = 30,
+                    speed: float = 5, friendly: bool = False, damage: float = 5,
+                    color: str = None): # type: ignore
+        """Aimed spread pattern towards target"""
+        # Calculate angle to target
+        dx = target_x - origin_x
+        dy = target_y - origin_y
+        center_angle = Angle(math.degrees(math.atan2(dy, dx)))
+        
+        return BulletPattern.spread(origin_x, origin_y, center_angle, num_bullets, 
+                                   spread_angle, speed, friendly, damage, color)
 class Obstacle:
     def __init__(self, x: float, y: float, width: float, height: float):
         self.x = x

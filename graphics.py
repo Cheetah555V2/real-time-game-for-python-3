@@ -93,13 +93,29 @@ class PygameGraphicsEngine(GraphicsEngine):
             
             self._draw_health_bar(npc, max_health=npc.get_max_health())
         
-    def _draw_bullets(self, bullets: list[Bullet],):
+    def _draw_bullets(self, bullets: list[Bullet]):
         for bullet in bullets:
             bullet_position = bullet.get_position()
-            if bullet.is_friendly():
-                pygame.draw.circle(self.screen, "yellow", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
+            
+            # Get bullet color (default to old colors if not specified)
+            if hasattr(bullet, 'color'):
+                color = bullet.color
             else:
-                pygame.draw.circle(self.screen, "red", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
+                color = "yellow" if bullet.is_friendly() else "red"
+            
+            # Draw bullet with colored circle and glow effect
+            pygame.draw.circle(self.screen, color, 
+                             pygame.Vector2(bullet_position[0], bullet_position[1]), 
+                             bullet.radius)
+            
+            # Add glow effect for enemy bullets
+            if not bullet.is_friendly():
+                glow_color = (min(255, int(pygame.Color(color).r * 1.5)),
+                            min(255, int(pygame.Color(color).g * 1.5)),
+                            min(255, int(pygame.Color(color).b * 1.5)))
+                pygame.draw.circle(self.screen, glow_color,
+                                 pygame.Vector2(bullet_position[0], bullet_position[1]),
+                                 bullet.radius * 1.5, 1)  # Outline
     
     def _draw_obstacles(self, obstacles: list):
         for obstacle in obstacles:
