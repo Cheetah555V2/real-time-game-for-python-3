@@ -27,6 +27,9 @@ class NPC:
     def get_position(self):
         return self.x, self.y
 
+    def shape(self) -> str:
+        return "circle"
+
 class Player(NPC):
     def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10):
         super().__init__(x, y, vx, vy)
@@ -71,6 +74,9 @@ class Player(NPC):
     
     def _reset_cooldown(self):
         self.bullet_cooldown = 5
+    
+    def shape(self) -> str:
+        return "circle"
 
 class Bullet():
     def __init__(self, x: float, y: float, x_speed: float, y_speed: float, radius: float = 2):
@@ -86,3 +92,22 @@ class Bullet():
     
     def get_position(self) -> tuple[float, float]:
         return self.x, self.y
+    
+    def shape(self) -> str:
+        return "circle"
+
+class Obstacle:
+    def __init__(self, x: float, y: float, width: float, height: float):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    
+    def get_position(self) -> tuple[float, float]:
+        return self.x, self.y
+    
+    def get_size(self) -> tuple[float, float]:
+        return self.width, self.height
+    
+    def shape(self) -> str:
+        return "rectangle"
