@@ -35,17 +35,23 @@ class Angle:
     def __repr__(self) -> str:
         return str(self.degree)
     
-    def __add__(self, other: object) -> float:
+    def __add__(self, other: object):
         try:
-            return (self.degree + other.degree) % 360 # type: ignore
+            return Angle((self.degree + other.degree) % 360) # type: ignore
         except AttributeError:
             raise AttributeError("Arimatic operation needs to be between Angle object only")
     
-    def __sub__(self, other: object) -> float:
+    def __sub__(self, other: object):
         try:
-            return (self.degree - other.degree) % 360 # type: ignore
+            return Angle((self.degree - other.degree) % 360) # type: ignore
         except AttributeError:
             raise AttributeError("Arimatic operation needs to be between Angle object only")
+    
+    def __mul__(self, other: float):
+        try:
+            return Angle((self.degree * other) % 360) # type: ignore
+        except AttributeError:
+            raise AttributeError("Arimatic operation needs to be between Angle object or float only")
     
 
 if __name__ == "__main__":

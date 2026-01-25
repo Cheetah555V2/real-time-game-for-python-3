@@ -12,5 +12,6 @@ if __name__ == "__main__":
                                             "KeyBoard",
                                             screen_size[0],
                                             screen_size[1],
-                                            fps= 30)
+                                            fps= 30,
+                                            debug= 1)                       # debug level
     engine.run()

@@ -3,7 +3,16 @@ import pygame
 import math
 
 class NPC:
-    def __init__(self, x: float, y: float, vx: float = 1, vy: float = 1, radius: float = 10, max_health: float = 100):
+    def __init__(self,
+                 x: float,
+                 y: float,
+                 vx: float = 1,
+                 vy: float = 1,
+                 radius: float = 10,
+                 max_health: float = 100,
+                 is_shooting: bool = False,
+                 bullet_cooldown: int = 30,
+                 bullet_damage: float = 10):
         self.x = x
         self.y = y
         self.vx = vx
@@ -11,6 +20,10 @@ class NPC:
         self.radius = radius
         self.health = max_health
         self.max_heahth = max_health
+        self.is_shooting = is_shooting
+        self.bullet_cooldown = bullet_cooldown
+        self.current_cooldown = 0
+        self.bullet_damage = bullet_damage
 
     def walk(self):
         self.x += self.vx
@@ -52,6 +65,10 @@ class NPC:
     def get_angle(self) -> Angle:
         return Angle(math.degrees(math.atan2(self.vy, self.vx)))
 
+    def shoot(self, angle: Angle, speed: float, friendly: bool = False) -> 'Bullet':
+        bullet = Bullet(self.x, self.y, angle, speed, friendly=friendly, damage=self.bullet_damage)
+        return bullet
+
 class Player(NPC):
     def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
         super().__init__(x, y, vx, vy)
@@ -61,6 +78,7 @@ class Player(NPC):
         self.raidus = radius
         self.health = max_health
         self.max_health = max_health
+        self.i_frame = 0
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
@@ -91,7 +109,9 @@ class Player(NPC):
         if self.bullet_cooldown != 0:
             self.bullet_cooldown -= 1
         elif key_pressed[pygame.K_SPACE]:
-            self._reset_cooldown()        
+            self._reset_cooldown()
+
+        self.update_i_frame()   
 
     def get_position(self):
         return super().get_position()
@@ -118,6 +138,13 @@ class Player(NPC):
     def set_position(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
+    
+    def reset_i_frame(self, duration: int) -> None:
+        self.i_frame = duration
+    
+    def update_i_frame(self) -> None:
+        if self.i_frame > 0:
+            self.i_frame -= 1
 
 class Bullet():
     def __init__(self, x: float, y: float, angle: Angle, speed: float, radius: float = 2, friendly: bool = True, damage: float = 10):

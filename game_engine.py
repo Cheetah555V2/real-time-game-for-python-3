@@ -1,12 +1,13 @@
 import time
 import pygame
 import math
-from level import tutorial
 from graphics import GraphicsEngine, PygameGraphicsEngine
 from game_object import Player, NPC, Bullet, Obstacle
 from datatype import Angle
 
+from level import tutorial, level_1, level_2, level_3, level_4, level_5, level_6
 
+level_order = [tutorial, level_1, level_2, level_3, level_4, level_5, level_6]
 class GameEngine:
     """
     GameEngine is responsible for:
@@ -86,31 +87,46 @@ class PygameGameEngine(GameEngine):
                  input_system,
                  width=40,
                  height=20,
-                 fps=10):
+                 fps=10,
+                 *args,
+                 debug: int = 0,
+                 **kwargs,
+                 ):
         # Start at tutorial level
-        player = Player(tutorial.player_start_position[0],
-                        tutorial.player_start_position[1],
+        player = Player(level_order[debug].player_start_position[0],
+                        level_order[debug].player_start_position[1],
                         3,
                         3, 
                         0,
                         4,
                         10,
                         100)
-        super().__init__(player, tutorial.npcs, graphics_engine, input_system, width, height, fps)
+        super().__init__(player, level_order[debug].npcs, graphics_engine, input_system, width, height, fps)
         self.graphics = graphics_engine
         graphics_engine.setup((self.width, self.height), "white")
         self.clock = pygame.time.Clock()
         self.bullets = []
-        self.obstacles = tutorial.obstacles
-        self.texts = tutorial.texts
-    
+        self.obstacles = level_order[debug].obstacles
+        self.texts = level_order[debug].texts
+        self.current_level = debug
+        self.is_game_over = False
+
+    def load_level(self, level_index: int):
+        level = level_order[level_index]
+        self.player.x = level.player_start_position[0]
+        self.player.y = level.player_start_position[1]
+        self.npcs = level.npcs
+        self.obstacles = level.obstacles
+        self.texts = level.texts
+        self.bullets = []
+        self.player.health = self.player.get_max_health()
+
     def run(self):
-        
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False    
-        
+
             self._check_collision()
             self._update_player(pygame.key.get_pressed())
             self._update_npc()
@@ -118,8 +134,33 @@ class PygameGameEngine(GameEngine):
             self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
             self.clock.tick(self.fps)
             
+            # Wait 3 seconds if all npcs are destroyed then go to the next level
+            if self.npcs == []:
+                for _ in range(self.fps * 3):
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            self.running = False    
+                    self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
+                    self.clock.tick(self.fps)
+                self.current_level += 1
+                if self.current_level >= len(level_order):
+                    self.running = False
+                else:
+                    self.load_level(self.current_level)
+            
+            if self.is_game_over:
+                self.graphics.render_over_screen()
+                for _ in range(self.fps * 3):
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            self.running = False    
+                    self.graphics.render_over_screen()
+                    self.clock.tick(self.fps)
+ 
+            
     def _check_collision(self):
         self._check_collision_npc_player()
+        self._check_collision_bullet_player()
         self._check_collision_bullet_npc()
         self._check_collision_npc_npc()
         self._check_collision_bullet_obstacle()
@@ -129,6 +170,7 @@ class PygameGameEngine(GameEngine):
     def _update_player(self, keys: pygame.key.ScancodeWrapper):
         self._handle_input(keys)
         self.player.reduce_cooldown()
+        self.player.update_i_frame()
 
     def _handle_input(self, keys: pygame.key.ScancodeWrapper):
         # Check if player shoot
@@ -142,8 +184,6 @@ class PygameGameEngine(GameEngine):
         # Check bound
         self.player.x = max(0, min(self.width - 1, self.player.x))
         self.player.y = max(0, min(self.height - 1, self.player.y))
-
-
 
     def _update_npc(self):
         for npc in self.npcs:
@@ -162,6 +202,17 @@ class PygameGameEngine(GameEngine):
                     npc.y = 0
                 else:
                     npc.y = self.width - 1
+        
+            # Check if npc shoot
+            if npc.is_shooting and npc.current_cooldown == 0:
+                shooting_angle = Angle(math.degrees(math.atan2(self.player.y - npc.y, self.player.x - npc.x)))
+                self.bullets.append(npc.shoot(shooting_angle,
+                                            5,
+                                            friendly=False,))
+                npc.current_cooldown = npc.bullet_cooldown
+            if npc.current_cooldown > 0:
+                npc.current_cooldown -= 1
+            
     
     def _update_bullet(self):
         remove = list()
@@ -188,6 +239,21 @@ class PygameGameEngine(GameEngine):
                     self.bullets.remove(bullet)
                     break
     
+    def _check_collision_bullet_player(self):
+        for bullet in self.bullets:
+            if self._check_collision_circle_circle(bullet.get_position(),
+                                                   bullet.radius,
+                                                   self.player.get_position(),
+                                                   self.player.radius) and not bullet.is_friendly():
+                if self.player.i_frame == 0:
+                    self.player.damage(bullet.damage)
+                    self.player.reset_i_frame(15) # 15 frames of invincibility
+                self.bullets.remove(bullet)
+
+                if self.player.get_health() <= 0:
+                    self.is_game_over = True
+                    break
+
     def _check_collision_npc_player(self):
         for npc in self.npcs:
             if self._check_collision_circle_circle(npc.get_position(),
@@ -205,7 +271,7 @@ class PygameGameEngine(GameEngine):
                 angle = Angle(math.degrees(math.atan2(dy, dx)))
 
                 npc.set_speed(angle.cos() * speed, angle.sin() * speed)
-    
+
     def _check_collision_npc_npc(self):
         for i in range(len(self.npcs)):
             for j in range(i + 1, len(self.npcs)):
@@ -249,21 +315,21 @@ class PygameGameEngine(GameEngine):
                                                           obstacle.get_position(),
                                                           obstacle.get_size()):
                     speed = npc.get_speed()
+                    in_coming_angle = npc.get_angle()
                     speed_magnitude = math.sqrt(speed[0] ** 2 + speed[1] ** 2)
 
-                    npc_pos = npc.get_position()
                     obs_pos = obstacle.get_position()
                     obs_size = obstacle.get_size()
 
                     # Determine the closest point on the rectangle to the circle center
-                    closest_x = max(obs_pos[0], min(npc_pos[0], obs_pos[0] + obs_size[0]))
-                    closest_y = max(obs_pos[1], min(npc_pos[1], obs_pos[1] + obs_size[1]))
-
-                    dx = npc_pos[0] - closest_x
-                    dy = npc_pos[1] - closest_y
-                    angle = Angle(math.degrees(math.atan2(dy, dx)))
-
-                    npc.set_speed(angle.cos() * speed_magnitude, angle.sin() * speed_magnitude)
+                    closest_x = max(obs_pos[0], min(npc.x, obs_pos[0] + obs_size[0]))
+                    closest_y = max(obs_pos[1], min(npc.y, obs_pos[1] + obs_size[1]))
+                    dx = npc.x - closest_x
+                    dy = npc.y - closest_y
+                    normal_angle = Angle(math.degrees(math.atan2(dy, dx)))
+                    reflect_angle = in_coming_angle + (normal_angle - in_coming_angle) * 2 + Angle(180)
+                    npc.set_speed(reflect_angle.cos() * speed_magnitude,
+                                  reflect_angle.sin() * speed_magnitude)
 
     def _check_collision_player_obstacle(self):
         for obstacle in self.obstacles:

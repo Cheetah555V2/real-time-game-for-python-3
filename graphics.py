@@ -31,15 +31,26 @@ class PygameGraphicsEngine(GraphicsEngine):
                npc_radius: float = 10,
                bullet_radius: float = 2) -> None:
         
+        
         self.screen.fill(self.background_color)
         self._draw_text(texts)
-        self._draw_npcs(npcs)
-        self._draw_player(player, player.raidus)
-        self._draw_bullets(bullets)
         self._draw_obstacles(obsitacles)
+        self._draw_npcs(npcs)
+        # Render player with i-frame blinking effect
+        if player.i_frame % 2 == 0:
+            self._draw_player(player, player.raidus)
+        self._draw_bullets(bullets)
         
         pygame.display.flip()
     
+    def render_over_screen(self, font_size: int = 50, color: str = "red"):
+        font = pygame.font.SysFont(None, font_size)
+        img = font.render("Game Over", True, color)
+        screen_rect = self.screen.get_rect()
+        text_rect = img.get_rect(center=screen_rect.center)
+        self.screen.blit(img, text_rect)
+        pygame.display.flip()
+
     def _draw_player(self, player: Player, player_radius: float = 10):
         player_position = player.get_position()
         pygame.draw.circle(self.screen,
