@@ -1,5 +1,5 @@
 import pygame
-from game_object import Player, NPC, Bullet, Obstacle
+from game_object import *
 
 class GraphicsEngine:
     def __init__(self) -> None:
@@ -27,13 +27,17 @@ class PygameGraphicsEngine(GraphicsEngine):
                npcs: list[NPC],
                bullets: list[Bullet],
                obsitacles: list[Obstacle],
+               texts: list[Text],
                npc_radius: float = 10,
                bullet_radius: float = 2) -> None:
         
         self.screen.fill(self.background_color)
+        self._draw_text(texts)
         self._draw_npcs(npcs)
         self._draw_player(player, player.raidus)
         self._draw_bullets(bullets)
+        self._draw_obstacles(obsitacles)
+        
         pygame.display.flip()
     
     def _draw_player(self, player: Player, player_radius: float = 10):
@@ -75,6 +79,12 @@ class PygameGraphicsEngine(GraphicsEngine):
                                          obstacle.width,
                                          obstacle.height)
                             )
+
+    def _draw_text(self, texts: list[Text]):
+        for text in texts:
+            font = pygame.font.SysFont(None, text.font_size)
+            img = font.render(text.content, True, text.color)
+            self.screen.blit(img, (text.x, text.y))
 
     def _draw_health_bar(self, entity, max_health: float, bar_length: float = 40, bar_height: float = 5):
         entity_position = entity.get_position()
