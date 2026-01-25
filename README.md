@@ -7,6 +7,6 @@ Team members
 
 ## Control
 - w/a/s/d to move
-- q to rotate clockwise
-- e to rotate counter-clockwise
+- e or right arrow to rotate clockwise
+- q or left arrow to rotate counter-clockwise
 - space to shoot bullet
