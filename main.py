@@ -12,5 +12,5 @@ if __name__ == "__main__":
                                     "KeyBoard",
                                     640,
                                     640,
-                                    fps= 5)
+                                    fps= 10)
     engine.run()

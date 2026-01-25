@@ -1,4 +1,5 @@
 from datatype import Angle
+import pygame
 
 class NPC:
     def __init__(self, x: int, y: int, vx: int = 1, vy: int = 1):
@@ -26,10 +27,11 @@ class NPC:
         return self.x, self.y
 
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1, angle= 0, v_angle= 1):
+    def __init__(self, x, y, vx= 1, vy= 1, angle= 0, v_angle= 2):
         super().__init__(x, y, vx, vy)
         self.angle = Angle(angle)
         self.v_angle = v_angle
+        self.bullet_cooldown = 0
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
@@ -47,21 +49,26 @@ class Player(NPC):
         if e_pressed:
             self.angle.rotate(-self.v_angle)
 
-    def update(self, key_pressed: set[str]):
-        key_pressed_lower = set()
-        for i in key_pressed:
-            key_pressed_lower.add(i.lower())
+    def update(self, key_pressed: pygame.key.ScancodeWrapper):
             
-        self.walk('w' in key_pressed_lower,
-                  'a' in key_pressed_lower,
-                  's' in key_pressed_lower,
-                  'd' in key_pressed_lower)
+        self.walk(key_pressed[pygame.K_w],
+                  key_pressed[pygame.K_a],
+                  key_pressed[pygame.K_s],
+                  key_pressed[pygame.K_d])
         
-        self.rotate('q' in key_pressed_lower,
-                    'e' in key_pressed_lower)
-    
+        self.rotate(key_pressed[pygame.K_q],
+                    key_pressed[pygame.K_e])
+
+        if self.bullet_cooldown != 0:
+            self.bullet_cooldown -= 1
+        elif key_pressed[pygame.K_SPACE]:
+            self._reset_cooldown()        
+
     def get_position(self):
         return super().get_position()
+    
+    def _reset_cooldown(self):
+        self.bullet_cooldown = 5
 
 class Bullet():
     def __init__(self, x: float, y: float, x_speed: float, y_speed: float):

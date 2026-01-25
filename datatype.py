@@ -8,14 +8,17 @@ class Angle:
         return self.degree
     
     def get_radian(self) -> float:
-        return math.pi * 180 / self.degree
+        if self.degree != 0:
+            return math.pi / 180 * self.degree
+        else:
+            return 0
     
-    def rotate(self, angle) -> None:
+    def rotate(self, degree) -> None:
         """
         This function rotate the angle counter-clock wise
         """
-        self.angle += angle
-        self.angle %= 360
+        self.degree += degree
+        self.degree %= 360
 
     def cos(self) -> float:
         return math.cos(self.get_radian())

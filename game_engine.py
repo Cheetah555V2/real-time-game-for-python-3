@@ -94,7 +94,7 @@ class PygameGameEngine(GameEngine):
             self._handle_input()
             self._update_npc()
             self._update_bullet()
-            self.graphics.render(self.player, self.npcs, self.bullets)
+            self.graphics.render(self.player, self.npcs, self.bullets) # type: ignore
             self.clock.tick(self.fps)
             
     
@@ -103,11 +103,14 @@ class PygameGameEngine(GameEngine):
         keys = pygame.key.get_pressed()
 
         # Check if player shoot
-        if keys[pygame.K_SPACE]:
-            self.bullets.append(Bullet(self.player.x, self.player.y, 2, 2))
+        if keys[pygame.K_SPACE] and self.player.bullet_cooldown == 0:
+            self.bullets.append(Bullet(self.player.x, self.player.y, self.player.angle.cos(), self.player.angle.sin()))
+
 
         # walk user
+        self.player.update(keys)
         self.player.walk(keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d])
+        self.player.rotate(keys[pygame.K_q], keys[pygame.K_e])
 
         # Check bound
         self.player.x = max(0, min(self.width - 1, self.player.x))
