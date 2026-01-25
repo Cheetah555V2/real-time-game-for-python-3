@@ -81,18 +81,28 @@ class GameEngine:
                     npc.y = self.width - 1
 
 class PygameGameEngine(GameEngine):
-    def __init__(self, player: Player,
+    def __init__(self,
                  graphics_engine: PygameGraphicsEngine,
                  input_system,
                  width=40,
                  height=20,
                  fps=10):
         # Start at tutorial level
+        player = Player(tutorial.player_start_position[0],
+                        tutorial.player_start_position[1],
+                        3,
+                        3, 
+                        0,
+                        4,
+                        10,
+                        100)
         super().__init__(player, tutorial.npcs, graphics_engine, input_system, width, height, fps)
+        self.graphics = graphics_engine
         graphics_engine.setup((self.width, self.height), "white")
         self.clock = pygame.time.Clock()
         self.bullets = []
-        self.obstacles = []
+        self.obstacles = tutorial.obstacles
+        self.texts = tutorial.texts
     
     def run(self):
         
@@ -105,13 +115,16 @@ class PygameGameEngine(GameEngine):
             self._update_player(pygame.key.get_pressed())
             self._update_npc()
             self._update_bullet()
-            self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles) # type: ignore
+            self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
             self.clock.tick(self.fps)
             
     def _check_collision(self):
         self._check_collision_npc_player()
         self._check_collision_bullet_npc()
         self._check_collision_npc_npc()
+        self._check_collision_bullet_obstacle()
+        self._check_collision_npc_obstacle()
+        self._check_collision_player_obstacle()
 
     def _update_player(self, keys: pygame.key.ScancodeWrapper):
         self._handle_input(keys)
@@ -218,6 +231,61 @@ class PygameGameEngine(GameEngine):
                     npc1.set_speed(angle.cos() * speed2_magnitude, angle.sin() * speed2_magnitude)
                     npc2.set_speed(-angle.cos() * speed1_magnitude, -angle.sin() * speed1_magnitude)
 
+    def _check_collision_bullet_obstacle(self):
+        for bullet in self.bullets:
+            for obstacle in self.obstacles:
+                if self._check_collision_circle_rectangle(bullet.get_position(),
+                                                          bullet.radius,
+                                                          obstacle.get_position(),
+                                                          obstacle.get_size()):
+                    self.bullets.remove(bullet)
+                    break
+    
+    def _check_collision_npc_obstacle(self):
+        for npc in self.npcs:
+            for obstacle in self.obstacles:
+                if self._check_collision_circle_rectangle(npc.get_position(),
+                                                          npc.radius,
+                                                          obstacle.get_position(),
+                                                          obstacle.get_size()):
+                    speed = npc.get_speed()
+                    speed_magnitude = math.sqrt(speed[0] ** 2 + speed[1] ** 2)
+
+                    npc_pos = npc.get_position()
+                    obs_pos = obstacle.get_position()
+                    obs_size = obstacle.get_size()
+
+                    # Determine the closest point on the rectangle to the circle center
+                    closest_x = max(obs_pos[0], min(npc_pos[0], obs_pos[0] + obs_size[0]))
+                    closest_y = max(obs_pos[1], min(npc_pos[1], obs_pos[1] + obs_size[1]))
+
+                    dx = npc_pos[0] - closest_x
+                    dy = npc_pos[1] - closest_y
+                    angle = Angle(math.degrees(math.atan2(dy, dx)))
+
+                    npc.set_speed(angle.cos() * speed_magnitude, angle.sin() * speed_magnitude)
+
+    def _check_collision_player_obstacle(self):
+        for obstacle in self.obstacles:
+            if self._check_collision_circle_rectangle(self.player.get_position(),
+                                                      self.player.radius,
+                                                      obstacle.get_position(),
+                                                      obstacle.get_size()):
+                player_pos = self.player.get_position()
+                obs_pos = obstacle.get_position()
+                obs_size = obstacle.get_size()
+
+                # Determine the closest point on the rectangle to the circle center
+                closest_x = max(obs_pos[0], min(player_pos[0], obs_pos[0] + obs_size[0]))
+                closest_y = max(obs_pos[1], min(player_pos[1], obs_pos[1] + obs_size[1]))
+
+                dx = player_pos[0] - closest_x
+                dy = player_pos[1] - closest_y
+                angle = Angle(math.degrees(math.atan2(dy, dx)))
+
+                self.player.set_position(closest_x + angle.cos() * (self.player.radius + 1),
+                                         closest_y + angle.sin() * (self.player.radius + 1))
+
     def _check_collision_circle_circle(self,
                                      obj1_pos: tuple[float, float],
                                      obj1_radius: float,
@@ -227,3 +295,25 @@ class PygameGameEngine(GameEngine):
         if distance <= obj1_radius + obj2_radius:
             return True
         return False
+
+    def _check_collision_circle_rectangle(self,
+                                        circle_pos: tuple[float, float],
+                                        circle_radius: float,
+                                        rect_pos: tuple[float, float],
+                                        rect_size: tuple[float, float]) -> bool:
+        circle_distance_x = abs(circle_pos[0] - (rect_pos[0] + rect_size[0] / 2))
+        circle_distance_y = abs(circle_pos[1] - (rect_pos[1] + rect_size[1] / 2))
+
+        if circle_distance_x > (rect_size[0] / 2 + circle_radius):
+            return False
+        if circle_distance_y > (rect_size[1] / 2 + circle_radius):
+            return False
+
+        if circle_distance_x <= (rect_size[0] / 2):
+            return True
+        if circle_distance_y <= (rect_size[1] / 2):
+            return True
+
+        corner_distance_sq = (circle_distance_x - rect_size[0] / 2) ** 2 + (circle_distance_y - rect_size[1] / 2) ** 2
+
+        return corner_distance_sq <= (circle_radius ** 2)
