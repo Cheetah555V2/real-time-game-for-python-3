@@ -1,5 +1,6 @@
 from datatype import Angle
 import pygame
+import math
 
 class NPC:
     def __init__(self, x: float, y: float, vx: float = 1, vy: float = 1, radius: float = 10, max_health: float = 100):
@@ -48,6 +49,9 @@ class NPC:
     def get_max_health(self) -> float:
         return self.max_heahth
 
+    def get_angle(self) -> Angle:
+        return Angle(math.degrees(math.atan2(self.vy, self.vx)))
+
 class Player(NPC):
     def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
         super().__init__(x, y, vx, vy)
@@ -81,8 +85,8 @@ class Player(NPC):
                   key_pressed[pygame.K_s],
                   key_pressed[pygame.K_d])
         
-        self.rotate(key_pressed[pygame.K_q],
-                    key_pressed[pygame.K_e])
+        self.rotate(key_pressed[pygame.K_q] or key_pressed[pygame.K_LEFT],
+                    key_pressed[pygame.K_e] or key_pressed[pygame.K_RIGHT])
 
         if self.bullet_cooldown != 0:
             self.bullet_cooldown -= 1
@@ -110,6 +114,10 @@ class Player(NPC):
     
     def get_max_health(self) -> float:
         return self.max_health
+
+    def set_position(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
 
 class Bullet():
     def __init__(self, x: float, y: float, angle: Angle, speed: float, radius: float = 2, friendly: bool = True, damage: float = 10):
@@ -149,3 +157,24 @@ class Obstacle:
     
     def shape(self) -> str:
         return "rectangle"
+
+
+class Text:
+    def __init__(self, content: str, position: tuple[float, float], font_size: int = 20, color: str = "black"):
+        self.content = content
+        self.x = position[0]
+        self.y = position[1]
+        self.font_size = font_size
+        self.color = color
+    
+    def get_position(self) -> tuple[float, float]:
+        return self.x, self.y
+    
+    def get_content(self) -> str:
+        return self.content
+    
+    def get_font_size(self) -> int:
+        return self.font_size
+    
+    def get_color(self) -> str:
+        return self.color
