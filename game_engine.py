@@ -1,7 +1,7 @@
 import time
 import pygame
 from graphics import GraphicsEngine, PygameGraphicsEngine
-from game_object import Player, NPC, Bullet
+from game_object import Player, NPC, Bullet, Obstacle
 
 class GameEngine:
     """

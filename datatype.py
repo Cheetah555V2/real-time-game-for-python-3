@@ -48,8 +48,6 @@ class Angle:
             raise AttributeError("Arimatic operation needs to be between Angle object only")
     
 
-    
-
 if __name__ == "__main__":
     x = Angle(180)
     y = 2
