@@ -90,7 +90,8 @@ class PygameGameEngine(GameEngine):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                
+            
+            self._check_collision_npc()
             self._handle_input()
             self._update_npc()
             self._update_bullet()
@@ -147,3 +148,15 @@ class PygameGameEngine(GameEngine):
         
         for i in remove[::-1]:
             self.bullets.pop(i)
+    
+    def _check_collision_npc(self):
+        for bullet in self.bullets:
+            for npc in self.npcs:
+                bullet_pos = bullet.get_position()
+                npc_pos = npc.get_position()
+                distance = ((bullet_pos[0] - npc_pos[0]) ** 2 + (bullet_pos[1] - npc_pos[1]) ** 2) ** 0.5
+                if distance <= npc.radius + bullet.radius:
+                    self.npcs.remove(npc)
+                    self.bullets.remove(bullet)
+                    break
+        

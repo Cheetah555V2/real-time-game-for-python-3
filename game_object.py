@@ -2,21 +2,22 @@ from datatype import Angle
 import pygame
 
 class NPC:
-    def __init__(self, x: int, y: int, vx: int = 1, vy: int = 1):
+    def __init__(self, x: int, y: int, vx: int = 1, vy: int = 1, radius: float = 10):
         self.x = x
         self.y = y
         self.vx = vx
         self.vy = vy
+        self.radius = radius
 
     def walk(self):
         self.x += self.vx
         self.y += self.vy
 
     def bounce_if_needed(self, x_min, x_max, y_min, y_max):
-        if self.x <= x_min or self.x >= x_max:
+        if self.x - self.radius <= x_min or self.x + self.radius >= x_max:
             self.vx *= -1
 
-        if self.y <= y_min or self.y >= y_max:
+        if self.y - self.radius <= y_min or self.y + self.radius >= y_max:
             self.vy *= -1
 
     def update(self, x_min, x_max, y_min, y_max):
@@ -27,11 +28,12 @@ class NPC:
         return self.x, self.y
 
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1, angle= 0, v_angle= 2):
+    def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10):
         super().__init__(x, y, vx, vy)
         self.angle = Angle(angle)
         self.v_angle = v_angle
         self.bullet_cooldown = 0
+        self.raidus = radius
     
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
@@ -71,11 +73,12 @@ class Player(NPC):
         self.bullet_cooldown = 5
 
 class Bullet():
-    def __init__(self, x: float, y: float, x_speed: float, y_speed: float):
+    def __init__(self, x: float, y: float, x_speed: float, y_speed: float, radius: float = 2):
         self.x = x
         self.y = y
         self.x_speed = x_speed
         self.y_speed = y_speed
+        self.radius = radius
     
     def update(self):
         self.x += self.x_speed
