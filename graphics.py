@@ -33,8 +33,8 @@ class PygameGraphicsEngine(GraphicsEngine):
         
         
         self.screen.fill(self.background_color)
-        self._draw_text(texts)
         self._draw_obstacles(obsitacles)
+        self._draw_text(texts)
         self._draw_npcs(npcs)
         # Render player with i-frame blinking effect
         if player.i_frame % 2 == 0:
@@ -43,9 +43,9 @@ class PygameGraphicsEngine(GraphicsEngine):
         
         pygame.display.flip()
     
-    def render_over_screen(self, font_size: int = 50, color: str = "red"):
+    def render_over_screen(self, font_size: int = 40, color: str = "green"):
         font = pygame.font.SysFont(None, font_size)
-        img = font.render("Game Over", True, color)
+        img = font.render("Thank you for playing our game", True, color)
         screen_rect = self.screen.get_rect()
         text_rect = img.get_rect(center=screen_rect.center)
         self.screen.blit(img, text_rect)
@@ -69,7 +69,28 @@ class PygameGraphicsEngine(GraphicsEngine):
     def _draw_npcs(self, npcs: list[NPC]):
         for npc in npcs:
             npc_position = npc.get_position()
-            pygame.draw.circle(self.screen, "purple", pygame.Vector2(npc_position[0], npc_position[1]), npc.radius)
+            
+            # Draw boss with different colors based on phase
+            if isinstance(npc, BossNPC):
+                boss_color = npc.get_color()
+                if npc.is_changing_phase():
+                    pulse = math.sin(pygame.time.get_ticks() * 0.01) * 0.2 + 0.8
+                    radius = int(npc.radius * pulse)
+                else:
+                    radius = npc.radius
+                
+                pygame.draw.circle(self.screen, boss_color, 
+                                 pygame.Vector2(npc_position[0], npc_position[1]), radius)
+                
+                font = pygame.font.SysFont(None, 24)
+                phase_text = f"PHASE {npc.phase}"
+                img = font.render(phase_text, True, boss_color)
+                self.screen.blit(img, (npc_position[0] - 40, npc_position[1] - npc.radius - 30))
+                
+            else:
+                pygame.draw.circle(self.screen, "purple", 
+                                 pygame.Vector2(npc_position[0], npc_position[1]), npc.radius)
+            
             self._draw_health_bar(npc, max_health=npc.get_max_health())
         
     def _draw_bullets(self, bullets: list[Bullet],):
@@ -80,16 +101,27 @@ class PygameGraphicsEngine(GraphicsEngine):
             else:
                 pygame.draw.circle(self.screen, "red", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
     
-    def _draw_obstacles(self, obstacles: list[Obstacle]):
+    def _draw_obstacles(self, obstacles: list):
         for obstacle in obstacles:
             obstacle_position = obstacle.get_position()
-            pygame.draw.rect(self.screen,
-                             "black",
-                             pygame.Rect(obstacle_position[0],
-                                         obstacle_position[1],
-                                         obstacle.width,
-                                         obstacle.height)
-                            )
+            if isinstance(obstacle, MovingObstacle):
+                # Draw moving obstacles in blue
+                pygame.draw.rect(self.screen,
+                                 "blue",
+                                 pygame.Rect(obstacle_position[0],
+                                             obstacle_position[1],
+                                             obstacle.width,
+                                             obstacle.height)
+                                )
+            else:
+                # Draw static obstacles in black
+                pygame.draw.rect(self.screen,
+                                 "black",
+                                 pygame.Rect(obstacle_position[0],
+                                             obstacle_position[1],
+                                             obstacle.width,
+                                             obstacle.height)
+                                )
 
     def _draw_text(self, texts: list[Text]):
         for text in texts:

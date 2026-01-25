@@ -2,7 +2,7 @@ import time
 import pygame
 import math
 from graphics import GraphicsEngine, PygameGraphicsEngine
-from game_object import Player, NPC, Bullet, Obstacle
+from game_object import *
 from datatype import Angle
 
 from level import tutorial, level_1, level_2, level_3, level_4, level_5, level_6
@@ -131,23 +131,27 @@ class PygameGameEngine(GameEngine):
             self._update_player(pygame.key.get_pressed())
             self._update_npc()
             self._update_bullet()
+            self._update_obstacles()
             self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
             self.clock.tick(self.fps)
             
             # Wait 3 seconds if all npcs are destroyed then go to the next level
-            if self.npcs == []:
-                for _ in range(self.fps * 3):
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            self.running = False    
-                    self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
-                    self.clock.tick(self.fps)
-                self.current_level += 1
-                if self.current_level >= len(level_order):
-                    self.running = False
-                else:
-                    self.load_level(self.current_level)
+            if self.npcs == [] and self.is_game_over == False:
+                if self.current_level < len(level_order):
+                    for _ in range(self.fps * 3):
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                self.running = False    
+                        self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
+                        self.clock.tick(self.fps)
+                    self.current_level += 1
+                    if self.current_level >= len(level_order):  
+                        self.is_game_over = True
+                    else:
+                        self.load_level(self.current_level)
+                
             
+            # Game over screen
             if self.is_game_over:
                 self.graphics.render_over_screen()
                 for _ in range(self.fps * 3):
@@ -187,33 +191,80 @@ class PygameGameEngine(GameEngine):
 
     def _update_npc(self):
         for npc in self.npcs:
-            npc.x += npc.vx
-            npc.y += npc.vy
-
-            if npc.x <= 0 or npc.x >= self.width - 1:
+            # Store old position
+            old_x, old_y = npc.x, npc.y
+            
+            # Calculate new position
+            new_x = npc.x + npc.vx
+            new_y = npc.y + npc.vy
+            
+            # Check collision with obstacles at new position
+            can_move_x, can_move_y = True, True
+            temp_x, temp_y = npc.x, npc.y
+            
+            # Test X movement
+            npc.x = new_x
+            for obstacle in self.obstacles:
+                if self._check_collision_circle_rectangle((npc.x, npc.y),
+                                                          npc.radius,
+                                                          obstacle.get_position(),
+                                                          obstacle.get_size()):
+                    can_move_x = False
+                    npc.vx *= -0.8  # Bounce with energy loss
+                    break
+            npc.x = old_x
+            
+            # Test Y movement  
+            npc.y = new_y
+            for obstacle in self.obstacles:
+                if self._check_collision_circle_rectangle((npc.x, npc.y),
+                                                          npc.radius,
+                                                          obstacle.get_position(),
+                                                          obstacle.get_size()):
+                    can_move_y = False
+                    npc.vy *= -0.8  # Bounce with energy loss
+                    break
+            npc.y = old_y
+            
+            # Only move if no collision
+            if can_move_x:
+                npc.x = new_x
+            if can_move_y:
+                npc.y = new_y
+            
+            # Original boundary checks (keep these)
+            if npc.x - npc.radius <= 0 or npc.x + npc.radius >= self.width:
                 npc.vx *= -1
-                if npc.x <= 0:
-                    npc.x = 0
+                if npc.x - npc.radius <= 0:
+                    npc.x = npc.radius
                 else:
-                    npc.x = self.width - 1
-            if npc.y <= 0 or npc.y >= self.height - 1:
+                    npc.x = self.width - npc.radius
+            if npc.y - npc.radius <= 0 or npc.y + npc.radius >= self.height:
                 npc.vy *= -1
-                if npc.y <= 0:
-                    npc.y = 0
+                if npc.y - npc.radius <= 0:
+                    npc.y = npc.radius
                 else:
-                    npc.y = self.width - 1
-        
-            # Check if npc shoot
+                    npc.y = self.height - npc.radius
+            
+            # Shooting logic (keep original)
             if npc.is_shooting and npc.current_cooldown == 0:
                 shooting_angle = Angle(math.degrees(math.atan2(self.player.y - npc.y, self.player.x - npc.x)))
-                self.bullets.append(npc.shoot(shooting_angle,
-                                            5,
-                                            friendly=False,))
+                self.bullets.append(npc.shoot(shooting_angle, 5, friendly=False))
                 npc.current_cooldown = npc.bullet_cooldown
             if npc.current_cooldown > 0:
                 npc.current_cooldown -= 1
+        
+        # Call boss update if needed (keep original)
+        self._update_boss()
             
-    
+    def _update_obstacles(self):
+        """Update moving obstacles positions"""
+        for obstacle in self.obstacles:
+            if isinstance(obstacle, MovingObstacle):
+                obstacle.update()
+                # Bounce off screen edges
+                obstacle.bounce_if_needed(0, self.width, 0, self.height)
+
     def _update_bullet(self):
         remove = list()
         for i, bullet in enumerate(self.bullets):
@@ -226,6 +277,20 @@ class PygameGameEngine(GameEngine):
         for i in remove[::-1]:
             self.bullets.pop(i)
     
+    def _update_boss(self):
+        """Update boss behavior and handle minion spawning"""
+        for npc in self.npcs:
+            if isinstance(npc, BossNPC):
+                # Update boss phase and movement
+                npc.update_phase()
+                npc.update_movement()
+                npc.update_phase_timer()
+                
+                # Check if boss should spawn minions
+                if npc.should_spawn_minions():
+                    minion = npc.create_minion()
+                    self.npcs.append(minion)
+
     def _check_collision_bullet_npc(self):
         for bullet in self.bullets:
             for npc in self.npcs:
@@ -314,22 +379,52 @@ class PygameGameEngine(GameEngine):
                                                           npc.radius,
                                                           obstacle.get_position(),
                                                           obstacle.get_size()):
-                    speed = npc.get_speed()
-                    in_coming_angle = npc.get_angle()
-                    speed_magnitude = math.sqrt(speed[0] ** 2 + speed[1] ** 2)
-
+                    # Get obstacle boundaries
                     obs_pos = obstacle.get_position()
                     obs_size = obstacle.get_size()
-
-                    # Determine the closest point on the rectangle to the circle center
-                    closest_x = max(obs_pos[0], min(npc.x, obs_pos[0] + obs_size[0]))
-                    closest_y = max(obs_pos[1], min(npc.y, obs_pos[1] + obs_size[1]))
-                    dx = npc.x - closest_x
-                    dy = npc.y - closest_y
-                    normal_angle = Angle(math.degrees(math.atan2(dy, dx)))
-                    reflect_angle = in_coming_angle + (normal_angle - in_coming_angle) * 2 + Angle(180)
-                    npc.set_speed(reflect_angle.cos() * speed_magnitude,
-                                  reflect_angle.sin() * speed_magnitude)
+                    obs_left = obs_pos[0]
+                    obs_right = obs_pos[0] + obs_size[0]
+                    obs_top = obs_pos[1]
+                    obs_bottom = obs_pos[1] + obs_size[1]
+                    
+                    # Calculate NPC's position relative to obstacle
+                    npc_x, npc_y = npc.get_position()
+                    
+                    # Find the closest point on the obstacle to the NPC
+                    closest_x = max(obs_left, min(npc_x, obs_right))
+                    closest_y = max(obs_top, min(npc_y, obs_bottom))
+                    
+                    # Calculate penetration depth
+                    dx = npc_x - closest_x
+                    dy = npc_y - closest_y
+                    distance = math.sqrt(dx*dx + dy*dy)
+                    
+                    if distance < npc.radius and distance > 0:
+                        # Normalize the direction vector
+                        nx = dx / distance
+                        ny = dy / distance
+                        
+                        # Push NPC out of the obstacle
+                        overlap = npc.radius - distance
+                        npc.x += nx * overlap * 1.1  # Slightly more to prevent sticking
+                        npc.y += ny * overlap * 1.1
+                        
+                        # Reflect velocity (bounce)
+                        dot_product = npc.vx * nx + npc.vy * ny
+                        npc.vx = npc.vx - 2 * dot_product * nx
+                        npc.vy = npc.vy - 2 * dot_product * ny
+                        
+                        # Reduce speed slightly to prevent clipping
+                        speed_reduction = 0.9
+                        npc.vx *= speed_reduction
+                        npc.vy *= speed_reduction
+                    
+                    elif distance == 0:
+                        # NPC is exactly at the corner, push out diagonally
+                        npc.x += npc.radius
+                        npc.y += npc.radius
+                        npc.vx *= -1
+                        npc.vy *= -1
 
     def _check_collision_player_obstacle(self):
         for obstacle in self.obstacles:
@@ -367,19 +462,18 @@ class PygameGameEngine(GameEngine):
                                         circle_radius: float,
                                         rect_pos: tuple[float, float],
                                         rect_size: tuple[float, float]) -> bool:
-        circle_distance_x = abs(circle_pos[0] - (rect_pos[0] + rect_size[0] / 2))
-        circle_distance_y = abs(circle_pos[1] - (rect_pos[1] + rect_size[1] / 2))
-
-        if circle_distance_x > (rect_size[0] / 2 + circle_radius):
-            return False
-        if circle_distance_y > (rect_size[1] / 2 + circle_radius):
-            return False
-
-        if circle_distance_x <= (rect_size[0] / 2):
-            return True
-        if circle_distance_y <= (rect_size[1] / 2):
-            return True
-
-        corner_distance_sq = (circle_distance_x - rect_size[0] / 2) ** 2 + (circle_distance_y - rect_size[1] / 2) ** 2
-
-        return corner_distance_sq <= (circle_radius ** 2)
+        circle_x, circle_y = circle_pos
+        rect_x, rect_y = rect_pos
+        rect_width, rect_height = rect_size
+        
+        # Find the closest point on the rectangle to the circle
+        closest_x = max(rect_x, min(circle_x, rect_x + rect_width))
+        closest_y = max(rect_y, min(circle_y, rect_y + rect_height))
+        
+        # Calculate distance between circle center and closest point
+        distance_x = circle_x - closest_x
+        distance_y = circle_y - closest_y
+        
+        # Check if distance is less than circle radius
+        distance_squared = distance_x * distance_x + distance_y * distance_y
+        return distance_squared < (circle_radius * circle_radius)

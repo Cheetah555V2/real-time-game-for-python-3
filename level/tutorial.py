@@ -1,5 +1,5 @@
 import math
-from game_object import Player, NPC, Bullet, Obstacle, Text
+from game_object import Player, NPC, Bullet, Obstacle, MovingObstacle, Text
 
 
 player_start_position = (320, 320)

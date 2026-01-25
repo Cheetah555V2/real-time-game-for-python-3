@@ -13,5 +13,5 @@ if __name__ == "__main__":
                                             screen_size[0],
                                             screen_size[1],
                                             fps= 30,
-                                            debug= 1)                       # debug level
+                                            debug= 2)                       # debug level
     engine.run()

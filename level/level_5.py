@@ -1,34 +1,48 @@
 import math
-from game_object import Player, NPC, Bullet, Obstacle, Text
+from game_object import *
 
 player_start_position = (320, 50)  # Start at top
 
-# Custom Obstacle class that moves (we'll need to modify game_object.py or handle in engine)
-# For now, we'll create static obstacles but position them to create moving wall effect when paired with NPCs
+# Smaller, slower moving obstacles for better performance
 obstacles = [
-    # Horizontal moving walls (top and bottom)
-    Obstacle(0, 100, 640, 20),
-    Obstacle(0, 520, 640, 20),
+    # Central static safe zone
+    Obstacle(280, 280, 80, 80),
     
-    # Vertical moving walls
-    Obstacle(100, 0, 20, 640),
-    Obstacle(520, 0, 20, 640),
+    # Small horizontal moving blocks (slow speed, small size)
+    MovingObstacle(100, 150, 30, 30, vx=1.0, vy=0, move_range_x=0, move_range_y=0),
+    MovingObstacle(510, 150, 30, 30, vx=-1.0, vy=0, move_range_x=0, move_range_y=0),
     
-    # Central static obstacles
-    Obstacle(250, 250, 140, 140),
+    # Small vertical moving blocks
+    MovingObstacle(150, 100, 30, 30, vx=0, vy=1.0, move_range_x=0, move_range_y=0),
+    MovingObstacle(490, 100, 30, 30, vx=0, vy=1.0, move_range_x=0, move_range_y=0),
+    
+    # Stationary obstacles for cover
+    Obstacle(50, 250, 40, 40),
+    Obstacle(550, 250, 40, 40),
+    Obstacle(50, 400, 40, 40),
+    Obstacle(550, 400, 40, 40),
+    
+    # Border obstacles with gaps
+    Obstacle(0, 0, 640, 20),    # Top
+    Obstacle(0, 620, 640, 20),  # Bottom
+    Obstacle(0, 0, 20, 620),    # Left
+    Obstacle(620, 0, 20, 620),  # Right
 ]
 
-# Enemies that patrol between obstacles
+# Fewer, slower enemies that are easier to deal with
 npcs = [
-    NPC(320, 150, 3, 0, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=90),
-    NPC(320, 490, -3, 0, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=90),
-    NPC(150, 320, 0, 3, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=90),
-    NPC(490, 320, 0, -3, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=90),
+    # Patrolling enemies with slower speed
+    NPC(200, 200, 1.5, 0, is_shooting=True, bullet_cooldown=50, bullet_damage=5, max_health=80),
+    NPC(440, 200, -1.5, 0, is_shooting=True, bullet_cooldown=50, bullet_damage=5, max_health=80),
+    
+    # Stationary snipers
+    NPC(100, 500, 0, 0, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=70),
+    NPC(540, 500, 0, 0, is_shooting=True, bullet_cooldown=40, bullet_damage=6, max_health=70),
+    
+    # One moving enemy with vertical patrol
+    NPC(320, 100, 0, 1.0, is_shooting=True, bullet_cooldown=60, bullet_damage=4, max_health=60),
 ]
 
 texts = [
-    Text("Level 5: Moving Walls", (10, 40), font_size=20, color="purple"),
-    Text("Patrolling enemies and tight corridors", (10, 70), font_size=16, color="purple"),
-    Text("Time your movements between enemy patrols", (10, 100), font_size=16, color="purple"),
-    Text("Use the central block as a temporary safe zone", (10, 130), font_size=16, color="purple"),
+    Text("Level 5: Moving Obstacles", (10, 40), font_size=20, color="purple")
 ]
