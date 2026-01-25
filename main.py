@@ -15,10 +15,9 @@ if __name__ == "__main__":
                                                  0,                 # Angle
                                                  5,                 # Angular Velocity
                                                  10),               # Radius
-                                    [NPC(20, 20, 1, 2), NPC(30, 30, 2, 3)],
                                     graphics.PygameGraphicsEngine(),
                                     "KeyBoard",
                                     screen_size[0],
                                     screen_size[1],
-                                    fps= 10)
+                                    fps= 30)
     engine.run()

@@ -1,7 +1,11 @@
 import time
 import pygame
+import math
+from level import tutorial
 from graphics import GraphicsEngine, PygameGraphicsEngine
 from game_object import Player, NPC, Bullet, Obstacle
+from datatype import Angle
+
 
 class GameEngine:
     """
@@ -77,41 +81,50 @@ class GameEngine:
                     npc.y = self.width - 1
 
 class PygameGameEngine(GameEngine):
-    def __init__(self, player: Player, npcs: list[NPC], graphics_engine: PygameGraphicsEngine, input_system,
-                 width=40, height=20, fps=10):
-        super().__init__(player, npcs, graphics_engine, input_system, width, height, fps)
+    def __init__(self, player: Player,
+                 graphics_engine: PygameGraphicsEngine,
+                 input_system,
+                 width=40,
+                 height=20,
+                 fps=10):
+        # Start at tutorial level
+        super().__init__(player, tutorial.npcs, graphics_engine, input_system, width, height, fps)
         graphics_engine.setup((self.width, self.height), "white")
         self.clock = pygame.time.Clock()
         self.bullets = []
+        self.obstacles = []
     
     def run(self):
         
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-            
-            self._check_collision_npc()
-            self._handle_input()
+                    self.running = False    
+        
+            self._check_collision()
+            self._update_player(pygame.key.get_pressed())
             self._update_npc()
             self._update_bullet()
-            self.graphics.render(self.player, self.npcs, self.bullets) # type: ignore
+            self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles) # type: ignore
             self.clock.tick(self.fps)
             
-    
-    def _handle_input(self):
-        # get input from user
-        keys = pygame.key.get_pressed()
+    def _check_collision(self):
+        self._check_collision_npc_player()
+        self._check_collision_bullet_npc()
+        self._check_collision_npc_npc()
 
+    def _update_player(self, keys: pygame.key.ScancodeWrapper):
+        self._handle_input(keys)
+        self.player.reduce_cooldown()
+
+    def _handle_input(self, keys: pygame.key.ScancodeWrapper):
         # Check if player shoot
         if keys[pygame.K_SPACE] and self.player.bullet_cooldown == 0:
-            self.bullets.append(Bullet(self.player.x, self.player.y, self.player.angle.cos(), self.player.angle.sin()))
+            self.bullets.append(Bullet(self.player.x, self.player.y, self.player.angle, 5))
 
 
         # walk user
         self.player.update(keys)
-        self.player.walk(keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d])
-        self.player.rotate(keys[pygame.K_q], keys[pygame.K_e])
 
         # Check bound
         self.player.x = max(0, min(self.width - 1, self.player.x))
@@ -149,14 +162,68 @@ class PygameGameEngine(GameEngine):
         for i in remove[::-1]:
             self.bullets.pop(i)
     
-    def _check_collision_npc(self):
+    def _check_collision_bullet_npc(self):
         for bullet in self.bullets:
             for npc in self.npcs:
-                bullet_pos = bullet.get_position()
-                npc_pos = npc.get_position()
-                distance = ((bullet_pos[0] - npc_pos[0]) ** 2 + (bullet_pos[1] - npc_pos[1]) ** 2) ** 0.5
-                if distance <= npc.radius + bullet.radius:
-                    self.npcs.remove(npc)
+                if self._check_collision_circle_circle(bullet.get_position(),
+                                                       bullet.radius,
+                                                       npc.get_position(),
+                                                       npc.radius) and bullet.is_friendly():
+                    npc.damage(bullet.damage)
+                    if npc.get_health() <= 0:
+                        self.npcs.remove(npc)
                     self.bullets.remove(bullet)
                     break
-        
+    
+    def _check_collision_npc_player(self):
+        for npc in self.npcs:
+            if self._check_collision_circle_circle(npc.get_position(),
+                                                   npc.radius,
+                                                   self.player.get_position(),
+                                                   self.player.radius):
+                speed = npc.get_speed()
+                npc_pos = npc.get_position()
+                player_pos = self.player.get_position()
+
+                speed = math.sqrt(speed[0] ** 2 + speed[1] ** 2)
+                
+                dx = npc_pos[0] - player_pos[0]
+                dy = npc_pos[1] - player_pos[1]
+                angle = Angle(math.degrees(math.atan2(dy, dx)))
+
+                npc.set_speed(angle.cos() * speed, angle.sin() * speed)
+    
+    def _check_collision_npc_npc(self):
+        for i in range(len(self.npcs)):
+            for j in range(i + 1, len(self.npcs)):
+                npc1 = self.npcs[i]
+                npc2 = self.npcs[j]
+                if self._check_collision_circle_circle(npc1.get_position(),
+                                                        npc1.radius,
+                                                        npc2.get_position(),
+                                                        npc2.radius):
+                    speed1 = npc1.get_speed()
+                    speed2 = npc2.get_speed()
+
+                    speed1_magnitude = math.sqrt(speed1[0] ** 2 + speed1[1] ** 2)
+                    speed2_magnitude = math.sqrt(speed2[0] ** 2 + speed2[1] ** 2)
+
+                    pos1 = npc1.get_position()
+                    pos2 = npc2.get_position()
+
+                    dx = pos1[0] - pos2[0]
+                    dy = pos1[1] - pos2[1]
+                    angle = Angle(math.degrees(math.atan2(dy, dx)))
+
+                    npc1.set_speed(angle.cos() * speed2_magnitude, angle.sin() * speed2_magnitude)
+                    npc2.set_speed(-angle.cos() * speed1_magnitude, -angle.sin() * speed1_magnitude)
+
+    def _check_collision_circle_circle(self,
+                                     obj1_pos: tuple[float, float],
+                                     obj1_radius: float,
+                                     obj2_pos: tuple[float, float],
+                                     obj2_radius: float) -> bool:
+        distance = ((obj1_pos[0] - obj2_pos[0]) ** 2 + (obj1_pos[1] - obj2_pos[1]) ** 2) ** 0.5
+        if distance <= obj1_radius + obj2_radius:
+            return True
+        return False

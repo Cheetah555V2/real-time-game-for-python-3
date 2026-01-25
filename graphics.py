@@ -1,5 +1,5 @@
 import pygame
-from game_object import Player, NPC, Bullet
+from game_object import Player, NPC, Bullet, Obstacle
 
 class GraphicsEngine:
     def __init__(self) -> None:
@@ -26,6 +26,7 @@ class PygameGraphicsEngine(GraphicsEngine):
                player: Player,
                npcs: list[NPC],
                bullets: list[Bullet],
+               obsitacles: list[Obstacle],
                npc_radius: float = 10,
                bullet_radius: float = 2) -> None:
         
@@ -48,17 +49,50 @@ class PygameGraphicsEngine(GraphicsEngine):
                          pygame.Vector2(player_position[0] + player_radius * player.angle.cos(),
                                         player_position[1] + player_radius * player.angle.sin())
                         )
+        self._draw_health_bar(player, max_health=100)
     
     def _draw_npcs(self, npcs: list[NPC]):
         for npc in npcs:
             npc_position = npc.get_position()
             pygame.draw.circle(self.screen, "purple", pygame.Vector2(npc_position[0], npc_position[1]), npc.radius)
+            self._draw_health_bar(npc, max_health=npc.get_max_health())
         
     def _draw_bullets(self, bullets: list[Bullet],):
         for bullet in bullets:
             bullet_position = bullet.get_position()
-            pygame.draw.circle(self.screen, "red", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
+            if bullet.is_friendly():
+                pygame.draw.circle(self.screen, "yellow", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
+            else:
+                pygame.draw.circle(self.screen, "red", pygame.Vector2(bullet_position[0], bullet_position[1]), bullet.radius)
+    
+    def _draw_obstacles(self, obstacles: list[Obstacle]):
+        for obstacle in obstacles:
+            obstacle_position = obstacle.get_position()
+            pygame.draw.rect(self.screen,
+                             "black",
+                             pygame.Rect(obstacle_position[0],
+                                         obstacle_position[1],
+                                         obstacle.width,
+                                         obstacle.height)
+                            )
 
+    def _draw_health_bar(self, entity, max_health: float, bar_length: float = 40, bar_height: float = 5):
+        entity_position = entity.get_position()
+        health_ratio = entity.get_health() / max_health
+        pygame.draw.rect(self.screen,
+                         "red",
+                         pygame.Rect(entity_position[0] - bar_length / 2,
+                                     entity_position[1] - entity.radius - 10,
+                                     bar_length,
+                                     bar_height)
+                        )
+        pygame.draw.rect(self.screen,
+                         "green",
+                         pygame.Rect(entity_position[0] - bar_length / 2,
+                                     entity_position[1] - entity.radius - 10,
+                                     bar_length * health_ratio,
+                                     bar_height)
+                        )
 
 if __name__ == "__main__":
     player1 = Player(10, 10, 1, 1)
