@@ -335,16 +335,33 @@ class BossNPC(NPC):
         # Default fallback
         return super().shoot_pattern(target_x, target_y)
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
+    def __init__(self, x, y, vx=1, vy=1, angle: float = 0, v_angle: float = 2,
+                 radius: float = 10, max_health: float = 100):
         super().__init__(x, y, vx, vy)
         self.angle = Angle(angle)
         self.v_angle = v_angle
-        self.bullet_cooldown = 0
+
+        # IMPORTANT: your code uses player.raidus in graphics; keep that name to avoid breaking.
         self.raidus = radius
+
         self.health = max_health
         self.max_health = max_health
         self.i_frame = 0
-    
+
+        # === Power-up friendly stats ===
+        self.bullet_damage = 10.0
+        self.base_shot_cooldown = 6  # frames (your old _reset_cooldown set 6)
+        self.bullet_cooldown = 0
+
+        # Multishot
+        self.multishot_enabled = False
+        self.multishot_count = 1
+        self.multishot_spread_deg = 0
+
+        # Movement (use float so small upgrades matter)
+        self.vx = float(vx)
+        self.vy = float(vy)
+
     def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
         if w_pressed:
             self.y -= self.vy
@@ -362,21 +379,81 @@ class Player(NPC):
             self.angle.rotate(self.v_angle)
 
     def update(self, key_pressed: pygame.key.ScancodeWrapper):
-            
         self.walk(key_pressed[pygame.K_w],
                   key_pressed[pygame.K_a],
                   key_pressed[pygame.K_s],
                   key_pressed[pygame.K_d])
-        
+
         self.rotate(key_pressed[pygame.K_q] or key_pressed[pygame.K_LEFT],
                     key_pressed[pygame.K_e] or key_pressed[pygame.K_RIGHT])
 
-        if self.bullet_cooldown != 0:
+        if self.bullet_cooldown > 0:
             self.bullet_cooldown -= 1
-        elif key_pressed[pygame.K_SPACE]:
-            self._reset_cooldown()
 
-        self.update_i_frame()   
+        self.update_i_frame()
+
+    # === NEW: Engine will call this to generate bullets ===
+    def shoot_bullets(self) -> list['Bullet']:
+        if self.bullet_cooldown != 0:
+            return []
+
+        bullets: list[Bullet] = []
+
+        if self.multishot_enabled and self.multishot_count >= 2:
+            # spread around current aim angle
+            total = self.multishot_count
+            spread = float(self.multishot_spread_deg)
+            if total == 2:
+                offsets = [-spread/2, spread/2]
+            else:
+                step = spread / (total - 1)
+                start = -spread / 2
+                offsets = [start + i * step for i in range(total)]
+
+            for off in offsets:
+                bullets.append(Bullet(self.x, self.y, self.angle + Angle(off), 5,
+                                      friendly=True, damage=self.bullet_damage, color="yellow"))
+        else:
+            bullets.append(Bullet(self.x, self.y, self.angle, 5,
+                                  friendly=True, damage=self.bullet_damage, color="yellow"))
+
+        self.bullet_cooldown = self.base_shot_cooldown
+        return bullets
+
+    # === PowerUp helper methods ===
+    def heal(self, amount: float) -> None:
+        self.health = min(self.max_health, self.health + amount)
+
+    def increase_max_health(self, amount: float) -> None:
+        self.max_health += amount
+        self.health = min(self.health, self.max_health)
+
+    def increase_move_speed(self, amount: float) -> None:
+        self.vx += amount
+        self.vy += amount
+
+    def enable_multishot(self, count: int = 3, spread_deg: float = 18) -> None:
+        self.multishot_enabled = True
+        self.multishot_count = max(2, int(count))
+        self.multishot_spread_deg = float(spread_deg)
+
+    # unchanged methods
+    def get_health(self) -> float:
+        return self.health
+
+    def get_max_health(self) -> float:
+        return self.max_health
+
+    def set_position(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+    def reset_i_frame(self, duration: int) -> None:
+        self.i_frame = duration
+
+    def update_i_frame(self) -> None:
+        if self.i_frame > 0:
+            self.i_frame -= 1
 
     def get_position(self):
         return super().get_position()

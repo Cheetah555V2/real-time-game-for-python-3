@@ -7,6 +7,8 @@ from datatype import Angle
 
 from level import level_6, level_7, level_8, tutorial, level_1, level_2, level_3, level_4, level_5
 
+from power_ups import roll_powerups, PowerUp
+
 level_order = [tutorial, level_1, level_2, level_3, level_4, level_5, level_6, level_7, level_8]
 class GameEngine:
     """
@@ -121,6 +123,48 @@ class PygameGameEngine(GameEngine):
         self.bullets = []
         self.player.health = self.player.get_max_health()
 
+def _powerup_intermission(self):
+    """Pause game and let player choose 1 of 3 random powerups."""
+    options = roll_powerups(3)
+    chosen_index = None
+    hover_index = -1
+
+    # simple pause loop
+    while chosen_index is None and self.running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                return
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    chosen_index = 0
+                elif event.key == pygame.K_2:
+                    chosen_index = 1
+                elif event.key == pygame.K_3:
+                    chosen_index = 2
+
+            if event.type == pygame.MOUSEMOTION:
+                hover_index = self.graphics.get_powerup_hover_index(event.pos)
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                idx = self.graphics.get_powerup_click_index(event.pos)
+                if idx != -1:
+                    chosen_index = idx
+
+        # draw the selection screen
+        self.graphics.render_powerup_screen(
+            player=self.player,
+            level_number=self.current_level + 1,  # next level number (1-based feel)
+            options=options,
+            hover_index=hover_index
+        )
+        self.clock.tick(self.fps)
+
+    # apply selected powerup
+    if chosen_index is not None and 0 <= chosen_index < len(options):
+        options[chosen_index].apply(self.player, self)
+
     def run(self):
         while self.running:
             for event in pygame.event.get():
@@ -136,38 +180,36 @@ class PygameGameEngine(GameEngine):
                 self._update_obstacles()
                 self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
                 
-                # Wait 3 seconds if all npcs are destroyed then go to the next level
-                if self.npcs == []:
-                    for _ in range(self.fps * 3):
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                self.running = False    
-                        self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
-                        self.clock.tick(self.fps)
-                    self.current_level += 1
-                    if self.current_level >= len(level_order):
-                        self.running = False
-                    else:
-                        self.load_level(self.current_level)
+        # If all npcs are destroyed, open power-up selection then go next level
+        if self.npcs == []:
+            # If last level, just end
+            if self.current_level + 1 >= len(level_order):
+                self.running = False
             else:
-                # Show game over screen for 3 seconds then exit
+                # Power-up selection screen (Archero style)
+                self._powerup_intermission()
+                # Now load next level
+                self.current_level += 1
+                self.load_level(self.current_level)
+        else:
+            # Show game over screen for 3 seconds then exit
+            self.graphics.render_over_screen()
+            pygame.display.flip()
+            
+            # Wait for 3 seconds
+            start_time = time.time()
+            while time.time() - start_time < 3:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.running = False
+                        return
+                # Keep updating the display during the wait
                 self.graphics.render_over_screen()
                 pygame.display.flip()
-                
-                # Wait for 3 seconds
-                start_time = time.time()
-                while time.time() - start_time < 3:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            self.running = False
-                            return
-                    # Keep updating the display during the wait
-                    self.graphics.render_over_screen()
-                    pygame.display.flip()
-                    self.clock.tick(self.fps)
-                
-                # After 3 seconds, exit the game
-                self.running = False
+                self.clock.tick(self.fps)
+            
+            # After 3 seconds, exit the game
+            self.running = False
             
             self.clock.tick(self.fps)
         
@@ -191,8 +233,8 @@ class PygameGameEngine(GameEngine):
 
     def _handle_input(self, keys: pygame.key.ScancodeWrapper):
         # Check if player shoot
-        if keys[pygame.K_SPACE] and self.player.bullet_cooldown == 0:
-            self.bullets.append(Bullet(self.player.x, self.player.y, self.player.angle, 5))
+        if keys[pygame.K_SPACE]:
+            self.bullets.extend(self.player.shoot_bullets())
 
 
         # walk user

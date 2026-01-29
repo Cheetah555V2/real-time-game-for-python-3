@@ -163,6 +163,86 @@ class PygameGraphicsEngine(GraphicsEngine):
                                      bar_height)
                         )
 
+    def render_powerup_screen(self, player: Player, level_number: int, options, hover_index: int = -1):
+        """Draw a simple Archero-like 3-card selection screen."""
+        self.screen.fill((15, 15, 20))
+
+        title_font = pygame.font.SysFont(None, 44)
+        small_font = pygame.font.SysFont(None, 26)
+
+        title = title_font.render(f"Stage Cleared! Choose a Power-Up", True, "white")
+        self.screen.blit(title, (40, 40))
+
+        sub = small_font.render(f"Next: Stage {level_number + 1}   (Press 1/2/3)", True, (180, 180, 180))
+        self.screen.blit(sub, (40, 90))
+
+        # layout cards
+        self._powerup_card_rects = []
+        w, h = 180, 260
+        gap = 30
+        total_w = 3 * w + 2 * gap
+        start_x = (self.screen.get_width() - total_w) // 2
+        y = 170
+
+        for i, p in enumerate(options):
+            rect = pygame.Rect(start_x + i * (w + gap), y, w, h)
+            self._powerup_card_rects.append(rect)
+
+            # card bg
+            border_color = "white" if i == hover_index else (120, 120, 140)
+            pygame.draw.rect(self.screen, (35, 35, 45), rect, border_radius=14)
+            pygame.draw.rect(self.screen, border_color, rect, width=3, border_radius=14)
+
+            # icon circle
+            pygame.draw.circle(self.screen, p.color, rect.midtop + pygame.Vector2(0, 45), 22)
+
+            # name
+            name_font = pygame.font.SysFont(None, 30)
+            name_img = name_font.render(p.name, True, "white")
+            name_rect = name_img.get_rect(center=(rect.centerx, rect.y + 95))
+            self.screen.blit(name_img, name_rect)
+
+        # description (wrap-ish)
+        desc_lines = self._wrap_text(p.description, small_font, w - 20)
+        yy = rect.y + 125
+        for line in desc_lines:
+            img = small_font.render(line, True, (210, 210, 210))
+            self.screen.blit(img, (rect.x + 10, yy))
+            yy += 24
+
+        # hotkey label
+        key_img = small_font.render(f"[{i+1}]", True, (200, 200, 255))
+        self.screen.blit(key_img, (rect.x + 10, rect.bottom - 30))
+
+    pygame.display.flip()
+
+def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int):
+    words = text.split(" ")
+    lines = []
+    cur = ""
+    for w in words:
+        test = (cur + " " + w).strip()
+        if font.size(test)[0] <= max_width:
+            cur = test
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines
+
+def get_powerup_hover_index(self, mouse_pos) -> int:
+    if not hasattr(self, "_powerup_card_rects"):
+        return -1
+    for i, r in enumerate(self._powerup_card_rects):
+        if r.collidepoint(mouse_pos):
+            return i
+    return -1
+
+def get_powerup_click_index(self, mouse_pos) -> int:
+    return self.get_powerup_hover_index(mouse_pos)
+
 if __name__ == "__main__":
     player1 = Player(10, 10, 1, 1)
     npcs = [NPC(20, 20), NPC(30, 30)]
