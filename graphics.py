@@ -38,7 +38,7 @@ class PygameGraphicsEngine(GraphicsEngine):
         self._draw_npcs(npcs)
         # Render player with i-frame blinking effect
         if player.i_frame % 2 == 0:
-            self._draw_player(player, player.raidus)
+            self._draw_player(player, player.radius)
         self._draw_bullets(bullets)
         
         pygame.display.flip()

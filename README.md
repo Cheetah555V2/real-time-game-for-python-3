@@ -6,7 +6,6 @@ Team members
 3. Mek
 
 ## Control
-- w/a/s/d to move
-- e or right arrow to rotate clockwise
-- q or left arrow to rotate counter-clockwise
+- w/s to move
+- a/d to rotate
 - space to shoot bullet

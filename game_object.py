@@ -335,41 +335,38 @@ class BossNPC(NPC):
         # Default fallback
         return super().shoot_pattern(target_x, target_y)
 class Player(NPC):
-    def __init__(self, x, y, vx= 1, vy= 1, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
-        super().__init__(x, y, vx, vy)
+    def __init__(self, x, y, velocity: float, angle: float = 0, v_angle: float = 2, radius: float = 10, max_health: float = 100):
+        super().__init__(x, y, velocity)
+        self.velocity = velocity
         self.angle = Angle(angle)
         self.v_angle = v_angle
         self.bullet_cooldown = 0
-        self.raidus = radius
+        self.radius = radius
         self.health = max_health
         self.max_health = max_health
         self.i_frame = 0
     
-    def walk(self, w_pressed: bool, a_pressed: bool, s_pressed: bool, d_pressed: bool):
-        if w_pressed:
-            self.y -= self.vy
-        if a_pressed:
-            self.x -= self.vx
-        if s_pressed:
-            self.y += self.vy
-        if d_pressed:
-            self.x += self.vx
+    def walk(self, forward: bool, backward: bool):
+        if forward:
+            self.x += self.angle.cos() * self.velocity
+            self.y += self.angle.sin() * self.velocity
+        if backward:
+            self.x -= self.angle.cos() * self.velocity
+            self.y -= self.angle.sin() * self.velocity
 
-    def rotate(self, q_pressed: bool, e_pressed: bool) -> None:
-        if q_pressed:
+    def rotate(self, key_counter_clockwise: bool, key_clockwise: bool) -> None:
+        if key_counter_clockwise:
             self.angle.rotate(-self.v_angle)
-        if e_pressed:
+        if key_clockwise:
             self.angle.rotate(self.v_angle)
 
     def update(self, key_pressed: pygame.key.ScancodeWrapper):
             
-        self.walk(key_pressed[pygame.K_w],
-                  key_pressed[pygame.K_a],
-                  key_pressed[pygame.K_s],
-                  key_pressed[pygame.K_d])
-        
-        self.rotate(key_pressed[pygame.K_q] or key_pressed[pygame.K_LEFT],
-                    key_pressed[pygame.K_e] or key_pressed[pygame.K_RIGHT])
+        self.walk(key_pressed[pygame.K_w] or key_pressed[pygame.K_UP],
+                  key_pressed[pygame.K_s] or key_pressed[pygame.K_DOWN])
+
+        self.rotate(key_pressed[pygame.K_a] or key_pressed[pygame.K_LEFT],
+                    key_pressed[pygame.K_d] or key_pressed[pygame.K_RIGHT])
 
         if self.bullet_cooldown != 0:
             self.bullet_cooldown -= 1

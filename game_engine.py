@@ -96,7 +96,6 @@ class PygameGameEngine(GameEngine):
         player = Player(level_order[debug].player_start_position[0],
                         level_order[debug].player_start_position[1],
                         3,
-                        3, 
                         0,
                         4,
                         10,
