@@ -98,7 +98,6 @@ class PygameGameEngine(GameEngine):
         player = Player(level_order[debug].player_start_position[0],
                         level_order[debug].player_start_position[1],
                         3,
-                        3, 
                         0,
                         4,
                         10,
@@ -123,55 +122,56 @@ class PygameGameEngine(GameEngine):
         self.bullets = []
         self.player.health = self.player.get_max_health()
 
-def _powerup_intermission(self):
-    """Pause game and let player choose 1 of 3 random powerups."""
-    options = roll_powerups(3)
-    chosen_index = None
-    hover_index = -1
+    def _powerup_intermission(self, options=None):
+        """Pause game and let player choose 1 of 3 random powerups."""
+        if options is None:
+            options = roll_powerups(3)
+        chosen_index = None
+        hover_index = -1
 
-    # simple pause loop
-    while chosen_index is None and self.running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-                return
+        # simple pause loop
+        while chosen_index is None and self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    return
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_1:
-                    chosen_index = 0
-                elif event.key == pygame.K_2:
-                    chosen_index = 1
-                elif event.key == pygame.K_3:
-                    chosen_index = 2
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        chosen_index = 0
+                    elif event.key == pygame.K_2:
+                        chosen_index = 1
+                    elif event.key == pygame.K_3:
+                        chosen_index = 2
 
-            if event.type == pygame.MOUSEMOTION:
-                hover_index = self.graphics.get_powerup_hover_index(event.pos)
+                if event.type == pygame.MOUSEMOTION:
+                    hover_index = self.graphics.get_powerup_hover_index(event.pos)
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                idx = self.graphics.get_powerup_click_index(event.pos)
-                if idx != -1:
-                    chosen_index = idx
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    idx = self.graphics.get_powerup_click_index(event.pos)
+                    if idx != -1:
+                        chosen_index = idx
 
-        # draw the selection screen
-        self.graphics.render_powerup_screen(
-            player=self.player,
-            level_number=self.current_level + 1,  # next level number (1-based feel)
-            options=options,
-            hover_index=hover_index
-        )
-        self.clock.tick(self.fps)
+            # draw the selection screen
+            self.graphics.render_powerup_screen(
+                player=self.player,
+                level_number=self.current_level + 1,  # next level number (1-based feel)
+                options=options,
+                hover_index=hover_index
+            )
+            self.clock.tick(self.fps)
 
-    # apply selected powerup
-    if chosen_index is not None and 0 <= chosen_index < len(options):
-        options[chosen_index].apply(self.player, self)
+        # apply selected powerup
+        if chosen_index is not None and 0 <= chosen_index < len(options):
+            options[chosen_index].apply(self.player, self)
 
     def run(self):
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False    
-            
-            # Only update game state if game is not over
+                    self.running = False
+
+            # If game is not over, update and render normally
             if not self.is_game_over:
                 self._check_collision()
                 self._update_player(pygame.key.get_pressed())
@@ -179,43 +179,38 @@ def _powerup_intermission(self):
                 self._update_bullet()
                 self._update_obstacles()
                 self.graphics.render(self.player, self.npcs, self.bullets, self.obstacles, self.texts)
-                
-        # If all npcs are destroyed, open power-up selection then go next level
-        if self.npcs == []:
-            # If last level, just end
-            if self.current_level + 1 >= len(level_order):
-                self.running = False
-            else:
-                # Power-up selection screen (Archero style)
-                self._powerup_intermission()
-                # Now load next level
-                self.current_level += 1
-                self.load_level(self.current_level)
-        else:
-            # Show game over screen for 3 seconds then exit
-            self.graphics.render_over_screen()
-            pygame.display.flip()
-            
-            # Wait for 3 seconds
-            start_time = time.time()
-            while time.time() - start_time < 3:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
+                # Cap framerate
+                self.clock.tick(self.fps)
+
+                # Level progression: if no NPCs remain, go to next level or end
+                if len(self.npcs) == 0:
+                    if self.current_level + 1 >= len(level_order):
                         self.running = False
-                        return
-                # Keep updating the display during the wait
+                    else:
+                        # Allow player to pick a powerup, then load next level
+                        self._powerup_intermission()
+                        self.current_level += 1
+                        self.load_level(self.current_level)
+                continue
+
+            # Game over handling
+            if self.is_game_over:
+                # Render game over screen and wait a short time, then exit
                 self.graphics.render_over_screen()
                 pygame.display.flip()
-                self.clock.tick(self.fps)
-            
-            # After 3 seconds, exit the game
-            self.running = False
-            
-            self.clock.tick(self.fps)
-        
+                start_time = time.time()
+                while time.time() - start_time < 3 and self.running:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            self.running = False
+                            break
+                    # keep tick so window remains responsive
+                    self.clock.tick(self.fps)
+                self.running = False
+
         # Clean up pygame after game loop ends
         pygame.quit()
- 
+
             
     def _check_collision(self):
         self._check_collision_npc_player()
@@ -261,9 +256,9 @@ def _powerup_intermission(self):
             npc.x = new_x
             for obstacle in self.obstacles:
                 if self._check_collision_circle_rectangle((npc.x, npc.y),
-                                                          npc.radius,
-                                                          obstacle.get_position(),
-                                                          obstacle.get_size()):
+                                                        npc.radius,
+                                                        obstacle.get_position(),
+                                                        obstacle.get_size()):
                     can_move_x = False
                     npc.vx *= -0.8  # Bounce with energy loss
                     break
@@ -273,9 +268,9 @@ def _powerup_intermission(self):
             npc.y = new_y
             for obstacle in self.obstacles:
                 if self._check_collision_circle_rectangle((npc.x, npc.y),
-                                                          npc.radius,
-                                                          obstacle.get_position(),
-                                                          obstacle.get_size()):
+                                                        npc.radius,
+                                                        obstacle.get_position(),
+                                                        obstacle.get_size()):
                     can_move_y = False
                     npc.vy *= -0.8  # Bounce with energy loss
                     break
@@ -358,9 +353,9 @@ def _powerup_intermission(self):
         for bullet in self.bullets:
             for npc in self.npcs:
                 if self._check_collision_circle_circle(bullet.get_position(),
-                                                       bullet.radius,
-                                                       npc.get_position(),
-                                                       npc.radius) and bullet.is_friendly():
+                                                    bullet.radius,
+                                                    npc.get_position(),
+                                                    npc.radius) and bullet.is_friendly():
                     npc.damage(bullet.damage)
                     if npc.get_health() <= 0:
                         self.npcs.remove(npc)
@@ -370,9 +365,9 @@ def _powerup_intermission(self):
     def _check_collision_bullet_player(self):
         for bullet in self.bullets:
             if self._check_collision_circle_circle(bullet.get_position(),
-                                                   bullet.radius,
-                                                   self.player.get_position(),
-                                                   self.player.radius) and not bullet.is_friendly():
+                                                bullet.radius,
+                                                self.player.get_position(),
+                                                self.player.radius) and not bullet.is_friendly():
                 if self.player.i_frame == 0:
                     self.player.damage(bullet.damage)
                     self.player.reset_i_frame(15) # 15 frames of invincibility
@@ -385,9 +380,9 @@ def _powerup_intermission(self):
     def _check_collision_npc_player(self):
         for npc in self.npcs:
             if self._check_collision_circle_circle(npc.get_position(),
-                                                   npc.radius,
-                                                   self.player.get_position(),
-                                                   self.player.radius):
+                                                npc.radius,
+                                                self.player.get_position(),
+                                                self.player.radius):
                 speed = npc.get_speed()
                 npc_pos = npc.get_position()
                 player_pos = self.player.get_position()
@@ -429,9 +424,9 @@ def _powerup_intermission(self):
         for bullet in self.bullets:
             for obstacle in self.obstacles:
                 if self._check_collision_circle_rectangle(bullet.get_position(),
-                                                          bullet.radius,
-                                                          obstacle.get_position(),
-                                                          obstacle.get_size()):
+                                                        bullet.radius,
+                                                        obstacle.get_position(),
+                                                        obstacle.get_size()):
                     self.bullets.remove(bullet)
                     break
     
@@ -439,9 +434,9 @@ def _powerup_intermission(self):
         for npc in self.npcs:
             for obstacle in self.obstacles:
                 if self._check_collision_circle_rectangle(npc.get_position(),
-                                                          npc.radius,
-                                                          obstacle.get_position(),
-                                                          obstacle.get_size()):
+                                                        npc.radius,
+                                                        obstacle.get_position(),
+                                                        obstacle.get_size()):
                     # Get obstacle boundaries
                     obs_pos = obstacle.get_position()
                     obs_size = obstacle.get_size()
@@ -492,9 +487,9 @@ def _powerup_intermission(self):
     def _check_collision_player_obstacle(self):
         for obstacle in self.obstacles:
             if self._check_collision_circle_rectangle(self.player.get_position(),
-                                                      self.player.radius,
-                                                      obstacle.get_position(),
-                                                      obstacle.get_size()):
+                                                    self.player.radius,
+                                                    obstacle.get_position(),
+                                                    obstacle.get_size()):
                 player_pos = self.player.get_position()
                 obs_pos = obstacle.get_position()
                 obs_size = obstacle.get_size()
@@ -508,13 +503,13 @@ def _powerup_intermission(self):
                 angle = Angle(math.degrees(math.atan2(dy, dx)))
 
                 self.player.set_position(closest_x + angle.cos() * (self.player.radius + 1),
-                                         closest_y + angle.sin() * (self.player.radius + 1))
+                                        closest_y + angle.sin() * (self.player.radius + 1))
 
     def _check_collision_circle_circle(self,
-                                     obj1_pos: tuple[float, float],
-                                     obj1_radius: float,
-                                     obj2_pos: tuple[float, float],
-                                     obj2_radius: float) -> bool:
+                                    obj1_pos: tuple[float, float],
+                                    obj1_radius: float,
+                                    obj2_pos: tuple[float, float],
+                                    obj2_radius: float) -> bool:
         distance = ((obj1_pos[0] - obj2_pos[0]) ** 2 + (obj1_pos[1] - obj2_pos[1]) ** 2) ** 0.5
         if distance <= obj1_radius + obj2_radius:
             return True

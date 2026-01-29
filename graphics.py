@@ -38,9 +38,9 @@ class PygameGraphicsEngine(GraphicsEngine):
         self._draw_npcs(npcs)
         # Render player with i-frame blinking effect
         if player.i_frame % 2 == 0:
-            self._draw_player(player, player.raidus)
+            self._draw_player(player, player.radius)
         self._draw_bullets(bullets)
-        
+
         pygame.display.flip()
     
     def render_over_screen(self, font_size: int = 40, color: str = "green"):
@@ -214,38 +214,39 @@ class PygameGraphicsEngine(GraphicsEngine):
         key_img = small_font.render(f"[{i+1}]", True, (200, 200, 255))
         self.screen.blit(key_img, (rect.x + 10, rect.bottom - 30))
 
-    pygame.display.flip()
+        # Actually present the rendered powerup screen
+        pygame.display.flip()
 
-def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int):
-    words = text.split(" ")
-    lines = []
-    cur = ""
-    for w in words:
-        test = (cur + " " + w).strip()
-        if font.size(test)[0] <= max_width:
-            cur = test
-        else:
-            if cur:
-                lines.append(cur)
-            cur = w
-    if cur:
-        lines.append(cur)
-    return lines
+    def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int):
+        words = text.split(" ")
+        lines = []
+        cur = ""
+        for w in words:
+            test = (cur + " " + w).strip()
+            if font.size(test)[0] <= max_width:
+                cur = test
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
 
-def get_powerup_hover_index(self, mouse_pos) -> int:
-    if not hasattr(self, "_powerup_card_rects"):
+    def get_powerup_hover_index(self, mouse_pos) -> int:
+        if not hasattr(self, "_powerup_card_rects"):
+            return -1
+        for i, r in enumerate(self._powerup_card_rects):
+            if r.collidepoint(mouse_pos):
+                return i
         return -1
-    for i, r in enumerate(self._powerup_card_rects):
-        if r.collidepoint(mouse_pos):
-            return i
-    return -1
 
-def get_powerup_click_index(self, mouse_pos) -> int:
-    return self.get_powerup_hover_index(mouse_pos)
+    def get_powerup_click_index(self, mouse_pos) -> int:
+        return self.get_powerup_hover_index(mouse_pos)
 
-if __name__ == "__main__":
-    player1 = Player(10, 10, 1, 1)
-    npcs = [NPC(20, 20), NPC(30, 30)]
-    gp_engine = GraphicsEngine()
+    if __name__ == "__main__":
+        player1 = Player(10, 10, 1, 1)
+        npcs = [NPC(20, 20), NPC(30, 30)]
+        gp_engine = GraphicsEngine()
 
-    gp_engine.render(player1, npcs)
+        gp_engine.render(player1, npcs)
